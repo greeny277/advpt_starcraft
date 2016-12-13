@@ -1,4 +1,4 @@
-// vim: ts=4:sw=4
+// vim: ts=4:sw=4 expandtab
 #include <iostream>
 #include <stdlib.h>
 #include <vector>
@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 class Entity {
+    protected:
     std::string name;
     std::string race;
 
@@ -17,7 +18,11 @@ class Entity {
     std::vector<std::string> requireOneOf; // we need one of the listed entities
     std::vector<std::string> producedByOneOf; // second required entity
     std::vector<std::string> morphedFrom; // third required entity. This entity is gone once this was built.
+    int supplyProvided;
+
+	// TODO Add Getter, add abilities for specific entities
 }
+
 class Unit : public Entity {
     int supplyCost;
 
@@ -34,6 +39,8 @@ class Unit : public Entity {
             requireOneOf({data[12]}),
             producedByOneOf({data[11]}),
             morphedFrom(std::stoi(data[10])),
+            supplyProvided(std::stoi(data[6])),
+
             supplyCost(std::stoi(data[5])) {
 
             std::stringstream requirementStream(data[12]);
@@ -44,7 +51,6 @@ class Unit : public Entity {
         }
 }
 class Building : public Entity {
-    int supplyProvided;
 
     public:
         Building(std::string data[13]) :
@@ -69,7 +75,7 @@ class Building : public Entity {
         }
 }
 
-std::vector<Entity> readConfig() {
+std::unordered_map<std::string, Entity> readConfig() {
     std::unordered_map<std::string, Entity> res;
 
     std::string line;
@@ -98,7 +104,6 @@ std::vector<Entity> readConfig() {
 
     }
     return result;
-    getline(file, genero, file.widen('\n'));
 }
 
 int main(int argc, char *argv[]) {
