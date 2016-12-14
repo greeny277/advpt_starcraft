@@ -37,10 +37,35 @@ std::unordered_map<std::string, EntityBP> readConfig() {
     return res;
 }
 
+
+std::queue<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP> blueprints, char *fname) {
+    std::fstream input;
+    input.open(fname);
+    std::string line;
+    while(std::getline(input, line)) {
+        // TODO: push blueprints Christian
+    }
+}
+
 int main(int argc, char *argv[]) {
     std::unordered_map<std::string, EntityBP> blueprints = readConfig();
+    for (size_t i = 0; i < argc; i++) {
+        std::queue<EntityBP*> buildOrder = readBuildOrder(blueprints, argv[1]);
+        // TODO: validateBuildOrder() Cuong
 
-    while (true) {
+        std::vector<State> states;
+
+
+        while (!buildOrder.empty()) {
+            // TODO: clone last state Malte
+            // TODO: increase time stamp Malte
+            // TODO: resourceUpdate() Malte
+
+
+            // TODO: checkActions() Christian
+            // TODO: assignUnitsToBuildings(buildOrder[0]) Cuong
+            // TODO: print JSON Malte
+        }
     }
 
 	return EXIT_SUCCESS;
