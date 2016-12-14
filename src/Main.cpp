@@ -7,9 +7,12 @@
 #include <fstream>
 #include <queue>
 
+#include "json.hpp"
+
 #include "EntityBP.h"
 #include "EntityInst.h"
 #include "State.h"
+#include "Action.h"
 
 std::unordered_map<std::string, EntityBP> readConfig() {
     std::unordered_map<std::string, EntityBP> res;
@@ -42,8 +45,8 @@ std::unordered_map<std::string, EntityBP> readConfig() {
 }
 
 
-std::queue<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP> blueprints, char *fname) {
-    std::queue<EntityBP*> bps;
+std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP> blueprints, char *fname) {
+    std::vector<EntityBP*> bps;
     std::fstream input;
     input.open(fname);
     std::string line;
@@ -61,29 +64,110 @@ void resourceUpdate(State &state) {
     }
 }
 
+static nlohmann::json printJSON(State &curState, int timestamp) {
+    nlohmann::json message;
+    message["time"] = timestamp;
+    message["status"]["resources"]["minerals"] = curState.resources.minerals;
+    message["status"]["resources"]["vespene"] = curState.resources.gas;
+    message["status"]["resources"]["supply"] = curState.currentMaxSupply;
+    message["status"]["resources"]["supply-used"] = curState.currentSupply;
+
+    int mineralWorkers = 0;
+    int gasWorkers = 0;
+    for (const auto & entity : curState.entities) {
+        auto res = dynamic_cast<const ResourceInst*>(entity);
+        if (res != nullptr) {
+            if (res->isMinerals())
+                mineralWorkers += res->getActiveWorkerCount();
+            if (res->isGas())
+                gasWorkers += res->getActiveWorkerCount();
+        }
+    }
+    message["status"]["workers"]["minerals"] = mineralWorkers;
+    message["status"]["workers"]["vespene"] = gasWorkers;
+
+    auto action = std::begin(curState.runningActions);
+    auto events = nlohmann::json::array();
+    while (action != std::end(curState.runningActions)) {
+        nlohmann::json m;
+        if ((*action)->isReady()) {
+            m = (*action)->printEndJSON();
+            action = curState.runningActions.erase(action);
+        } else if ((*action)->getStartPoint() == timestamp) {
+            m = (*action)->printStartJSON();
+            action++;
+        }
+
+        if (!m.empty()) {
+            events.push_back(m);
+        }
+    }
+    message["events"] = events;
+    return message;
+}
+static nlohmann::json getInitialJSON(const std::unordered_map<std::string, EntityBP> &blueprints,
+        const std::vector<EntityBP*> &initialUnits,
+        const std::string &race,
+        bool valid) {
+    nlohmann::json j;
+    std::string game("sc2-hots-");
+    game.append(race);
+    j["game"] = game;
+    j["buildListValid"] = valid ? "1" : "0"; // WTF? why strings when JSON has booleans?
+
+    for (const auto bp : blueprints) {
+        nlohmann::json positions = nlohmann::json::array();
+        for (size_t i = 0; i < initialUnits.size(); i++) {
+            if (initialUnits[i] == &bp.second) {
+                positions.push_back(std::to_string(i)); // again, why strings???
+            }
+        }
+
+        if (positions.size() > 0) {
+            j["initialUnits"][bp.first] = positions;
+        }
+    }
+    return j;
+}
+
 int main(int argc, char *argv[]) {
     std::unordered_map<std::string, EntityBP> blueprints = readConfig();
     for (size_t i = 1; i < argc; i++) {
-        std::queue<EntityBP*> buildOrder = readBuildOrder(blueprints, argv[i]);
+        auto initialUnits = readBuildOrder(blueprints, argv[i]);
+        std::string race(initialUnits.front()->getRace());
+
         // TODO: validateBuildOrder() Cuong
+        bool valid = true;
+        nlohmann::json j = getInitialJSON(blueprints, initialUnits, race, valid);
 
-        std::vector<State> states;
+        std::queue<EntityBP*, std::vector<EntityBP*>> buildOrder(initialUnits);
 
 
-        while (!buildOrder.empty()) {
-            if (states.empty()) {
-                states.push_back(State(buildOrder.front()->getRace(), blueprints));
-            } else {
-                states.push_back(states[states.size() - 1]);
+        if (valid) {
+            std::vector<State> states;
+
+            auto messages = nlohmann::json::array();
+            j["messages"] = messages;
+
+            while (!buildOrder.empty()) {
+                if (states.empty()) {
+                    states.push_back(State(race, blueprints));
+                } else {
+                    states.push_back(states.back());
+                }
+                State &curState = states.back();
+                int currentTime = states.size();
+                resourceUpdate(curState);
+
+                // TODO: checkActions() Christian
+                // TODO: assignUnitsToBuildings(buildOrder[0]) Cuong
+
+                messages.push_back(printJSON(curState, messages));
             }
-            State &curState = states[states.size() - 1];
-            int currentTime = states.size();
-            resourceUpdate(curState);
 
-            // TODO: checkActions() Christian
-            // TODO: assignUnitsToBuildings(buildOrder[0]) Cuong
-            // TODO: print JSON Malte
         }
+
+        std::cout << j.dump(4) << std::endl;
     }
 
 	return EXIT_SUCCESS;

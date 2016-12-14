@@ -2,20 +2,26 @@
 #pragma once
 
 #include "EntityBP.h"
-#include "Action.h"
+
+class BuildingStarted;
 
 class EntityInst {
 private:
     const EntityBP *blueprint;
     int currentEnergy;
     bool morphing; // when the unit is currently upgrading, the entity cannot do anything else
+    const int id;
+    static int next_id;
 public:
     virtual bool isBusy() const {
         return morphing;
     }
     inline EntityInst(const EntityBP *bp) :
-            blueprint(bp) {
+            blueprint(bp),
+            id(next_id++) {
     }
+    inline const EntityBP *getBlueprint() const { return blueprint; }
+    inline const int getID() const { return id; }
 };
 class UnitInst : public EntityInst {
 public:
@@ -43,6 +49,14 @@ class ResourceInst : public BuildingInst {
     int maxWorkerSlots;
     int activeWorkerSlots;
 public:
+    ResourceInst(const BuildingBP *building) :
+        BuildingInst(building),
+        remaining(0, 0), // TODO: fix these values
+        miningRate(0, 0),
+        maxWorkerSlots(0),
+        activeWorkerSlots(0) {
+    }
+
     inline Resources mine() {
         Resources out = miningRate * maxWorkerSlots;
         if (out.minerals > remaining.minerals)
@@ -55,6 +69,10 @@ public:
     Resources getRemainingResources();
     void addWorker();
     void removeWorker();
+
+    inline bool getActiveWorkerCount() const { return activeWorkerSlots; }
+    inline bool isGas() const { return miningRate.gas > 0; }
+    inline bool isMinerals() const { return miningRate.minerals > 0; }
 };
 class WorkerInst : public UnitInst {
     ResourceInst *workingResource;
@@ -67,6 +85,8 @@ public:
             isBuilding(false) {
     }
     void assignToResource(ResourceInst &);
-    BuildingStarted startBuilding(BuildingBP &);
-    inline bool isBusy() { return isBuilding || workingResource != nullptr; }
+    /*inline BuildingStarted startBuilding(BuildingBP &) {
+        TODO
+    }*/
+    inline bool isBusy() const { return isBuilding || workingResource != nullptr; }
 };
