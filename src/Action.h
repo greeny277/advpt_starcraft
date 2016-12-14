@@ -1,5 +1,6 @@
 #pragma once
-#include "State.h"
+
+class State;
 
 class Action {
     int startPoint;
@@ -12,3 +13,12 @@ class Action {
 /*class MuleAction : Action {
     ConcreteWorker *mule;
 };*/
+
+class BuildingStarted : public Action {
+    inline virtual void printJSON() {
+        // TODO Malte
+    }
+    inline virtual void finish(State &) {
+        // TODO Christian
+    }
+};

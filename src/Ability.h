@@ -1,6 +1,7 @@
 // vim: ts=4:sw=4 expandtab
 #pragma once
-#include "State.h"
+
+class State;
 
 class Ability {
 public:

@@ -44,15 +44,18 @@ protected:
     }
 
 public:
-    inline int getStartEnergy() { return startEnergy; }
-    inline int getMaxEnergy() { return maxEnergy; }
-    inline Resources getCosts() { return costs; }
-    inline int getBuildTime() { return buildTime; }
-    inline std::vector<Ability*>& getAbilities() { return abilities; }
-    inline std::vector<std::string>& getRequireOneOf() { return requireOneOf; }
-    inline std::vector<std::string>& getProducedByOneOf() { return producedByOneOf; }
-    inline std::vector<std::string>& getMorphedFrom() { return morphedFrom; }
-    inline int getSupplyProvided() { return supplyProvided; }
+    virtual inline ~EntityBP() {}
+    inline const std::string & getName() const { return name; }
+    inline const std::string & getRace() const { return race; }
+    inline int getStartEnergy() const { return startEnergy; }
+    inline int getMaxEnergy() const { return maxEnergy; }
+    inline Resources getCosts() const { return costs; }
+    inline int getBuildTime() const { return buildTime; }
+    inline const std::vector<Ability*>& getAbilities() const { return abilities; }
+    inline const std::vector<std::string>& getRequireOneOf() const { return requireOneOf; }
+    inline const std::vector<std::string>& getProducedByOneOf() const { return producedByOneOf; }
+    inline const std::vector<std::string>& getMorphedFrom() const { return morphedFrom; }
+    inline int getSupplyProvided() const { return supplyProvided; }
 };
 
 class UnitBP : public EntityBP {
