@@ -23,20 +23,20 @@ protected:
     int supplyProvided;
 
 	// TODO add abilities for specific entities
-    inline EntityBP(std::string data[13]) :
+    inline EntityBP(std::string data[12]) :
         name(data[0]),
-        race(data[9]),
-        startEnergy(std::stoi(data[7])),
-        maxEnergy(std::stoi(data[8])),
-        costs(Resources(std::stoi(data[2]), std::stoi(data[3]))),
-        buildTime(std::stoi(data[4])),
+        race(data[8]),
+        startEnergy(std::stoi(data[6])),
+        maxEnergy(std::stoi(data[7])),
+        costs(Resources(std::stoi(data[1]), std::stoi(data[2]))),
+        buildTime(std::stoi(data[3])),
         abilities(),
-        requireOneOf({data[12]}),
-        producedByOneOf({data[11]}),
-        morphedFrom(std::stoi(data[10])),
-        supplyProvided(std::stoi(data[6])) {
+        requireOneOf(),
+        producedByOneOf({data[10]}),
+        morphedFrom({data[9]}),
+        supplyProvided(std::stoi(data[5])) {
 
-        std::stringstream requirementStream(data[12]);
+        std::stringstream requirementStream(data[11]);
         std::string req;
         while (std::getline(requirementStream, req, '/')) {
             requireOneOf.push_back(req);
@@ -59,9 +59,9 @@ class UnitBP : public EntityBP {
     int supplyCost;
 
 public:
-    inline UnitBP(std::string data[13]) :
+    inline UnitBP(std::string data[12]) :
         EntityBP(data),
-        supplyCost(std::stoi(data[5])) {
+        supplyCost(std::stoi(data[4])) {
 
     }
 
