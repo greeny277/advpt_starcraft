@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
                 // TODO: checkActions() Christian
                 // TODO: assignUnitsToBuildings(buildOrder[0]) Cuong
 
-                messages.push_back(printJSON(curState, messages));
+                messages.push_back(printJSON(curState, currentTime));
             }
 
         }
