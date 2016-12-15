@@ -51,7 +51,11 @@ std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP> 
     input.open(fname);
     std::string line;
     while(std::getline(input, line)) {
-        // TODO: push blueprints Christian
+        auto itEntBP = blueprints.find(line);
+        if(itEntBP == blueprints.end()){
+            return {};
+        }
+        bps.push_back(&(itEntBP->second));
     }
     return bps;
 }
@@ -134,6 +138,10 @@ int main(int argc, char *argv[]) {
     std::unordered_map<std::string, EntityBP> blueprints = readConfig();
     for (size_t i = 1; i < argc; i++) {
         auto initialUnits = readBuildOrder(blueprints, argv[i]);
+        if(initialUnits.empty()){
+            std::cerr << "The build order list contains unknown members" << std::endl;
+            return EXIT_FAILURE;
+        }
         std::string race(initialUnits.front()->getRace());
 
         // TODO: validateBuildOrder() Cuong
