@@ -134,6 +134,16 @@ static nlohmann::json getInitialJSON(const std::unordered_map<std::string, Entit
     return j;
 }
 
+static void checkActions(State &s){
+    for(Action *action : s.runningActions){
+        action->tick();
+        if(action->isReady()){
+            action->finish(s);
+        }
+    }
+    return;
+}
+
 int main(int argc, char *argv[]) {
     std::unordered_map<std::string, EntityBP> blueprints = readConfig();
     for (size_t i = 1; i < argc; i++) {
@@ -167,7 +177,7 @@ int main(int argc, char *argv[]) {
                 int currentTime = states.size();
                 resourceUpdate(curState);
 
-                // TODO: checkActions() Christian
+                checkActions(curState); // TODO Christian
                 // TODO: assignUnitsToBuildings(buildOrder[0]) Cuong
 
                 messages.push_back(printJSON(curState, currentTime));

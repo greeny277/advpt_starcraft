@@ -2,8 +2,7 @@
 #pragma once
 
 #include "EntityBP.h"
-
-class BuildingStarted;
+#include "Action.h"
 
 class EntityInst {
 private:
@@ -75,6 +74,7 @@ public:
     inline bool isMinerals() const { return miningRate.minerals > 0; }
 };
 class WorkerInst : public UnitInst {
+private:
     ResourceInst *workingResource;
     bool isBuilding;
 
@@ -84,9 +84,18 @@ public:
             workingResource(nullptr),
             isBuilding(false) {
     }
-    void assignToResource(ResourceInst &);
-    /*inline BuildingStarted startBuilding(BuildingBP &) {
-        TODO
-    }*/
+    void assignToResource(ResourceInst *r){
+        workingResource = r;
+    }
+    inline BuildingStarted *startBuilding(BuildingBP *bbp, int curTime) {
+        workingResource = nullptr;
+        isBuilding = true;
+        return new BuildingStarted(curTime, bbp, this);
+    }
+
+    inline void stopBuilding() {
+        isBuilding = false;
+        return;
+    }
     inline bool isBusy() const { return isBuilding || workingResource != nullptr; }
 };
