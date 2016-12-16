@@ -22,6 +22,8 @@ EntityBP::EntityBP(std::string data[12]) :
         }
     }
 
+EntityBP::~EntityBP(){
+}
 const std::string & EntityBP::getName() const { return name; }
 const std::string & EntityBP::getRace() const { return race; }
 int EntityBP::getStartEnergy() const { return startEnergy; }
