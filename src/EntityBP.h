@@ -1,11 +1,10 @@
 // vim: ts=4:sw=4 expandtab
 #pragma once
 
-#include <vector>
-#include <string>
-#include <sstream>
 #include "Resources.h"
 #include "Ability.h"
+#include <string>
+#include <vector>
 
 class EntityBP {
 protected:
@@ -23,10 +22,10 @@ protected:
     int supplyProvided;
 
 	// TODO add abilities for specific entities
-     EntityBP(std::string data[12]);
+    EntityBP(std::string data[12]);
 
 public:
-    virtual  ~EntityBP();
+     virtual ~EntityBP();
      const std::string & getName() const;
      const std::string & getRace() const;
      int getStartEnergy() const;
@@ -37,7 +36,7 @@ public:
      const std::vector<std::string>& getRequireOneOf() const;
      const std::vector<std::string>& getProducedByOneOf() const;
      const std::vector<std::string>& getMorphedFrom() const;
-     int getSupplyProvided();
+     int getSupplyProvided() const;
 };
 
 class UnitBP : public EntityBP {

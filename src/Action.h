@@ -3,8 +3,11 @@
 
 #include "json.hpp"
 #include "EntityBP.h"
-#include "EntityInst.h"
 
+
+class BuildingInst;
+class EntityInst;
+class WorkerInst;
 class State;
 
 class Action {
@@ -15,9 +18,9 @@ class Action {
     Action(int startPoint_, int timeToFinish_);
     void tick();
     bool isReady() const;
-    virtual nlohmann::json printStartJSON();
-    virtual nlohmann::json printEndJSON();
-    virtual void finish(State &);
+    virtual nlohmann::json printStartJSON() = 0;
+    virtual nlohmann::json printEndJSON() = 0;
+    virtual void finish(State &) = 0;
     int getStartPoint() const;
 };
 

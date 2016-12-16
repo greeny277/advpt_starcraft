@@ -1,22 +1,19 @@
 // vim: ts=4:sw=4 expandtab
-#include "json.hpp"
-#include "EntityBP.h"
-#include "EntityInst.h"
 #include "Action.h"
 
-inline Action::Action(int startPoint_, int timeToFinish_) :
+#include "State.h"
+#include "EntityInst.h"
+#include "EntityBP.h"
+
+ Action::Action(int startPoint_, int timeToFinish_) :
     startPoint(startPoint_),
     timeToFinish(timeToFinish_){
     }
-inline void Action::tick() {
+ void Action::tick() {
     timeToFinish -= 1;
     // TODO: Chronoboost Cuong
 }
-inline bool Action::isReady() const { return timeToFinish <= 0; }
-virtual nlohmann::json Action::printStartJSON() const = 0;
-virtual nlohmann::json Action::printEndJSON() const = 0;
-virtual void Action::finish(State &) = 0;
-inline int Action::getStartPoint() const { return startPoint; }
+ bool Action::isReady() const { return timeToFinish <= 0; }
 
 AbilityAction::AbilityAction(const char *name_,
         const EntityInst *triggeredBy_,
@@ -29,7 +26,7 @@ AbilityAction::AbilityAction(const char *name_,
     }
 // TODO Missing init of start point and timeToFinish
 
-inline nlohmann::json AbilityAction::printStartJSON() {
+ nlohmann::json AbilityAction::printStartJSON() {
     nlohmann::json j;
     j["type"] = "special";
     j["name"] = name;
@@ -39,7 +36,7 @@ inline nlohmann::json AbilityAction::printStartJSON() {
     }
     return j;
 }
-inline nlohmann::json AbilityAction::printEndJSON() {
+ nlohmann::json AbilityAction::printEndJSON() {
     nlohmann::json j;
     return j;
 }
@@ -47,13 +44,13 @@ inline nlohmann::json AbilityAction::printEndJSON() {
   ConcreteWorker *mule;
   };*/
 
-BuildingStarted::BuildingStarted(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_) :
+BuildingStarted::BuildingStarted(int startPoint_, BuildingBP *blueprint_ , WorkerInst *worker_) :
     blueprint(blueprint_),
     worker(worker_),
-    Action(startPoint_,blueprint->getBuildTime()){
+    Action(startPoint_,blueprint_->getBuildTime()){
     }
 
-inline nlohmann::json BuildingStarted::printStartJSON() const {
+ nlohmann::json BuildingStarted::printStartJSON() {
     nlohmann::json j;
     j["type"] = "build-start";
     j["name"] = blueprint->getName();
@@ -61,7 +58,7 @@ inline nlohmann::json BuildingStarted::printStartJSON() const {
     // TODO print Building ID?
     return j;
 }
-inline nlohmann::json BuildingStarted::printEndJSON() const {
+ nlohmann::json BuildingStarted::printEndJSON() {
     nlohmann::json j;
     j["type"] = "build-end";
     j["name"] = blueprint->getName();
@@ -71,7 +68,7 @@ inline nlohmann::json BuildingStarted::printEndJSON() const {
     return j;
 }
 
-inline void BuildingStarted::finish(State &s) {
+ void BuildingStarted::finish(State &s) {
     // stop worker to build
     worker->stopBuilding();
 

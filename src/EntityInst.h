@@ -3,6 +3,7 @@
 
 #include "EntityBP.h"
 #include "Resources.h"
+#include "Action.h"
 
 class BuildingStarted;
 
