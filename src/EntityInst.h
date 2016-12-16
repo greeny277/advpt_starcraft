@@ -2,7 +2,9 @@
 #pragma once
 
 #include "EntityBP.h"
-#include "Action.h"
+#include "Resources.h"
+
+class BuildingStarted;
 
 class EntityInst {
 private:
@@ -12,66 +14,40 @@ private:
     const int id;
     static int next_id;
 public:
-    virtual bool isBusy() const {
-        return morphing;
-    }
-    inline EntityInst(const EntityBP *bp) :
-            blueprint(bp),
-            id(next_id++) {
-    }
-    inline const EntityBP *getBlueprint() const { return blueprint; }
-    inline const int getID() const { return id; }
+    virtual bool isBusy() const;
+    EntityInst(const EntityBP *bp);
+    const EntityBP *getBlueprint();
+    const int getID() const;
 };
 class UnitInst : public EntityInst {
 public:
-    inline bool isBusy() { return false; }
-    inline UnitInst(const UnitBP *unit) :
-            EntityInst(unit) {
-    }
+     bool isBusy();
+     UnitInst(const UnitBP *unit);
 };
+
 class BuildingInst : public EntityInst {
     int freeBuildSlots;
     bool chronoBoostActivated;
 public:
-    inline BuildingInst(const BuildingBP *building) :
-            EntityInst(building),
-            freeBuildSlots(1),
-            chronoBoostActivated(false) {
-    }
-    inline bool isBusy() const {
-        return freeBuildSlots == 0 || EntityInst::isBusy();
-    }
+     BuildingInst(const BuildingBP *building);
+     bool isBusy() const;
 };
+
 class ResourceInst : public BuildingInst {
     Resources remaining;
     Resources miningRate;
     int maxWorkerSlots;
     int activeWorkerSlots;
 public:
-    ResourceInst(const BuildingBP *building) :
-        BuildingInst(building),
-        remaining(0, 0), // TODO: fix these values
-        miningRate(0, 0),
-        maxWorkerSlots(0),
-        activeWorkerSlots(0) {
-    }
-
-    inline Resources mine() {
-        Resources out = miningRate * maxWorkerSlots;
-        if (out.minerals > remaining.minerals)
-            out.minerals = remaining.minerals;
-        if (out.gas > remaining.gas)
-            out.gas = remaining.gas;
-        remaining = remaining - out;
-        return out;
-    }
+    ResourceInst(const BuildingBP *building);
+    Resources mine();
     Resources getRemainingResources();
     void addWorker();
     void removeWorker();
 
-    inline bool getActiveWorkerCount() const { return activeWorkerSlots; }
-    inline bool isGas() const { return miningRate.gas > 0; }
-    inline bool isMinerals() const { return miningRate.minerals > 0; }
+     bool getActiveWorkerCount() const;
+     bool isGas() const;
+     bool isMinerals() const;
 };
 class WorkerInst : public UnitInst {
 private:
@@ -79,23 +55,9 @@ private:
     bool isBuilding;
 
 public:
-    inline WorkerInst(const UnitBP *unit) :
-            UnitInst(unit),
-            workingResource(nullptr),
-            isBuilding(false) {
-    }
-    void assignToResource(ResourceInst *r){
-        workingResource = r;
-    }
-    inline BuildingStarted *startBuilding(BuildingBP *bbp, int curTime) {
-        workingResource = nullptr;
-        isBuilding = true;
-        return new BuildingStarted(curTime, bbp, this);
-    }
-
-    inline void stopBuilding() {
-        isBuilding = false;
-        return;
-    }
-    inline bool isBusy() const { return isBuilding || workingResource != nullptr; }
+     WorkerInst(const UnitBP *unit);
+    void assignToResource(ResourceInst *r);
+     BuildingStarted *startBuilding(BuildingBP *bbp, int curTime);
+     void stopBuilding();
+     bool isBusy() const;
 };

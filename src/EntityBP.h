@@ -23,55 +23,32 @@ protected:
     int supplyProvided;
 
 	// TODO add abilities for specific entities
-    inline EntityBP(std::string data[12]) :
-        name(data[0]),
-        race(data[8]),
-        startEnergy(std::stoi(data[6])),
-        maxEnergy(std::stoi(data[7])),
-        costs(Resources(std::stoi(data[1]), std::stoi(data[2]))),
-        buildTime(std::stoi(data[3])),
-        abilities(),
-        requireOneOf(),
-        producedByOneOf({data[10]}),
-        morphedFrom({data[9]}),
-        supplyProvided(std::stoi(data[5])) {
-
-        std::stringstream requirementStream(data[11]);
-        std::string req;
-        while (std::getline(requirementStream, req, '/')) {
-            requireOneOf.push_back(req);
-        }
-    }
+     EntityBP(std::string data[12]);
 
 public:
-    virtual inline ~EntityBP() {}
-    inline const std::string & getName() const { return name; }
-    inline const std::string & getRace() const { return race; }
-    inline int getStartEnergy() const { return startEnergy; }
-    inline int getMaxEnergy() const { return maxEnergy; }
-    inline Resources getCosts() const { return costs; }
-    inline int getBuildTime() const { return buildTime; }
-    inline const std::vector<Ability*>& getAbilities() const { return abilities; }
-    inline const std::vector<std::string>& getRequireOneOf() const { return requireOneOf; }
-    inline const std::vector<std::string>& getProducedByOneOf() const { return producedByOneOf; }
-    inline const std::vector<std::string>& getMorphedFrom() const { return morphedFrom; }
-    inline int getSupplyProvided() const { return supplyProvided; }
+    virtual  ~EntityBP();
+     const std::string & getName() const;
+     const std::string & getRace() const;
+     int getStartEnergy() const;
+     int getMaxEnergy() const;
+     Resources getCosts() const;
+     int getBuildTime() const;
+     const std::vector<Ability*>& getAbilities() const;
+     const std::vector<std::string>& getRequireOneOf() const;
+     const std::vector<std::string>& getProducedByOneOf() const;
+     const std::vector<std::string>& getMorphedFrom() const;
+     int getSupplyProvided();
 };
 
 class UnitBP : public EntityBP {
     int supplyCost;
 
 public:
-    inline UnitBP(std::string data[12]) :
-        EntityBP(data),
-        supplyCost(std::stoi(data[4])) {
-
-    }
-
-    inline int getSupplyCost() { return supplyCost; }
+     UnitBP(std::string data[12]);
+    int getSupplyCost();
 };
+
 class BuildingBP : public EntityBP {
 public:
-    inline BuildingBP(std::string data[13]) : EntityBP(data) {
-    }
+     BuildingBP(std::string data[13]);
 };
