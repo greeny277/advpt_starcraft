@@ -144,6 +144,40 @@ static void checkActions(State &s){
     return;
 }
 
+static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string race) {
+    std::vector<std::string> dependencies;
+    for(auto bp : initialUnits) {
+        if(bp->getRace() != race) {
+            // entity to be build does not belong to the the same race as the the first declared
+            return false;
+        }
+        // check if the building has alle the required dependencies
+        auto requireOneOf = bp->getRequireOneOf();
+        if(!requireOneOf.empty()) {
+            for(std::string req : requireOneOf) {
+                if ( std::find(dependencies.begin(), dependencies.end(), req) == dependencies.end() ) {
+                    //required entity was not listed before this entity
+                    return false;
+                }
+            }
+        }
+        
+        // check if the required building for the to be produced unit exists
+        auto producedByOneOf = bp->getProducedByOneOf();
+        if(!producedByOneOf.empty()) {
+            for(std::string req : producedByOneOf) {
+                if ( std::find(dependencies.begin(), dependencies.end(), req) == dependencies.end() ) {
+                    //required entity was not listed before this entity
+                    return false;
+                }
+            }
+        }
+        dependencies.push_back(bp->getName());
+    }
+
+    return true;
+}
+
 int main(int argc, char *argv[]) {
     std::unordered_map<std::string, EntityBP> blueprints = readConfig();
     for (size_t i = 1; i < argc; i++) {
@@ -154,8 +188,7 @@ int main(int argc, char *argv[]) {
         }
         std::string race(initialUnits.front()->getRace());
 
-        // TODO: validateBuildOrder() Cuong
-        bool valid = true;
+        bool valid = validateBuildOrder(initialUnits, race);
         nlohmann::json j = getInitialJSON(blueprints, initialUnits, race, valid);
 
         std::queue<EntityBP*, std::vector<EntityBP*>> buildOrder(initialUnits);
