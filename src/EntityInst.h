@@ -43,8 +43,10 @@ public:
     ResourceInst(const BuildingBP *building);
     Resources mine();
     Resources getRemainingResources();
-    void addWorker();
-    void removeWorker();
+    /** Add/remove worker from resource and return true if
+     * it was successful**/
+    bool addWorker();
+    bool removeWorker();
 
      bool getActiveWorkerCount() const;
      bool isGas() const;

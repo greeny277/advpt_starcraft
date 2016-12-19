@@ -58,12 +58,22 @@ Resources ResourceInst::getRemainingResources(){
     return remaining;
 }
 
-void ResourceInst::addWorker(){
-    return;
+bool ResourceInst::addWorker(){
+    if(activeWorkerSlots == maxWorkerSlots){
+        return false;
+    } else {
+        activeWorkerSlots++;
+    }
+    return true;
 }
 
-void ResourceInst::removeWorker(){
-    return;
+bool ResourceInst::removeWorker(){
+    if(activeWorkerSlots == 0){
+        return false;
+    } else {
+        activeWorkerSlots--;
+    }
+    return true;
 }
 
  bool ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
