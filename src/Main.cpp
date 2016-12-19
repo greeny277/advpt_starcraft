@@ -179,6 +179,8 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
         dependencies.push_back(bp->getName());
     }
 
+    // TODO check morphed_from
+
     return true;
 }
 
