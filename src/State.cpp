@@ -27,7 +27,14 @@
             }
         }
 
-        // TODO: 1 overlord, 3 larvae
+        if (race == "zerg") {
+            auto larva = static_cast<const UnitBP*>(&blueprints.at("larva"));
+            for (size_t i = 0; i < 3; i++) {
+                entities.push_back(new UnitInst(larva));
+            }
+            entities.push_back(new UnitInst(static_cast<const UnitBP*>(&blueprints.at("overlord"))));
+        }
+}
 nlohmann::json State::getUnitJSON() const {
     nlohmann::json units;
     for (const EntityInst *inst : entities) {
