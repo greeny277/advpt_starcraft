@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
             auto messages = nlohmann::json::array();
             j["messages"] = messages;
 
-            while (!buildOrder.empty()) {
+            while (states.size() < 1000 && !buildOrder.empty()) {
                 if (states.empty()) {
                     states.push_back(State(race, blueprints));
                 } else {
@@ -199,6 +199,10 @@ int main(int argc, char *argv[]) {
                 messages.push_back(printJSON(curState, currentTime));
             }
 
+            if (!buildOrder.empty()) {
+                valid = false;
+                j.erase(j.find("messages"));
+            }
         }
 
         std::cout << j.dump(4) << std::endl;
