@@ -173,8 +173,6 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
                 if ( std::find(dependencies.begin(), dependencies.end(), req) == dependencies.end() ) {
                     //required entity was not listed before this entity
                     return false;
-                } else {
-                    break;
                 }
             }
         }
