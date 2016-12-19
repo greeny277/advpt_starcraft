@@ -20,6 +20,6 @@ public:
     std::vector<Action*> runningActions;
 
 public:
-    State(const std::string &race, const std::unordered_map<std::string, EntityBP> &blueprints);
+    State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints);
     nlohmann::json getUnitJSON() const;
 };

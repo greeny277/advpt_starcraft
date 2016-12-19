@@ -15,8 +15,8 @@
 #include "Action.h"
 #include "Ability.h"
 
-std::unordered_map<std::string, EntityBP> readConfig() {
-    std::unordered_map<std::string, EntityBP> res;
+std::unordered_map<std::string, EntityBP*> readConfig() {
+    std::unordered_map<std::string, EntityBP*> res;
 
     std::string line;
     std::string race;
@@ -27,17 +27,16 @@ std::unordered_map<std::string, EntityBP> readConfig() {
             continue;
         }
 
-        //std::string name, type, minerals, vespene, buildTime, supplyCost, supplyProvided, startEnergy, maxEnergy, race, morphed_from, produced_by, dependency;
-        std::string cells[12];
+        std::string cells[15];
         std::stringstream lineStream(line);
         size_t i;
-        for (i = 0; std::getline(lineStream, cells[i], ',') && i < 12; i++) {
+        for (i = 0; std::getline(lineStream, cells[i], ',') && i < 15; i++) {
         }
 
         if (cells[1] == "building") {
-            res.insert({cells[0], BuildingBP(cells)});
+            res.insert({cells[0], new BuildingBP(cells)});
         } else {
-            res.insert({cells[0], UnitBP(cells)});
+            res.insert({cells[0], new UnitBP(cells)});
         }
 
 
@@ -46,7 +45,7 @@ std::unordered_map<std::string, EntityBP> readConfig() {
 }
 
 
-std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP> blueprints, char *fname) {
+std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP*> blueprints, char *fname) {
     std::vector<EntityBP*> bps;
     std::fstream input;
     input.open(fname);
@@ -56,7 +55,7 @@ std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP> 
         if(itEntBP == blueprints.end()){
             return {};
         }
-        bps.push_back(&(itEntBP->second));
+        bps.push_back(itEntBP->second);
     }
     return bps;
 }
@@ -111,7 +110,7 @@ static nlohmann::json printJSON(State &curState, int timestamp) {
     message["events"] = events;
     return message;
 }
-static nlohmann::json getInitialJSON(const std::unordered_map<std::string, EntityBP> &blueprints,
+static nlohmann::json getInitialJSON(const std::unordered_map<std::string, EntityBP*> &blueprints,
         const std::vector<EntityBP*> &initialUnits,
         const std::string &race,
         bool valid) {
@@ -124,7 +123,7 @@ static nlohmann::json getInitialJSON(const std::unordered_map<std::string, Entit
     for (const auto bp : blueprints) {
         nlohmann::json positions = nlohmann::json::array();
         for (size_t i = 0; i < initialUnits.size(); i++) {
-            if (initialUnits[i] == &bp.second) {
+            if (initialUnits[i] == bp.second) {
                 positions.push_back(std::to_string(i)); // again, why strings???
             }
         }
@@ -146,7 +145,7 @@ static void checkActions(State &s){
     return;
 }
 
-static bool checkAndRunAbilities(int currentTime, State &s, const std::unordered_map<std::string, EntityBP> &blueprints) {
+static bool checkAndRunAbilities(int currentTime, State &s, const std::unordered_map<std::string, EntityBP*> &blueprints) {
     for (EntityInst *e : s.entities) {
         for (const Ability *ab : e->getBlueprint()->getAbilities()) {
             if (e->getCurrentEnergy() >= ab->energyCosts) {
@@ -160,7 +159,7 @@ static bool checkAndRunAbilities(int currentTime, State &s, const std::unordered
 }
 
 int main(int argc, char *argv[]) {
-    const std::unordered_map<std::string, EntityBP> blueprints = readConfig();
+    const std::unordered_map<std::string, EntityBP*> blueprints = readConfig();
     for (size_t i = 1; i < argc; i++) {
         auto initialUnits = readBuildOrder(blueprints, argv[i]);
         if(initialUnits.empty()){

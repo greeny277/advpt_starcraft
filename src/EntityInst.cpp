@@ -10,28 +10,28 @@ bool EntityInst::isBusy() const {
     return morphing;
 }
 
- EntityInst::EntityInst(const EntityBP *bp) :
+EntityInst::EntityInst(const EntityBP *bp) :
     blueprint(bp),
     id(next_id++) {
-    }
+}
 
- const EntityBP* EntityInst::getBlueprint() const { return blueprint; }
+const EntityBP* EntityInst::getBlueprint() const { return blueprint; }
 
- const int EntityInst::getID() const { return id; }
+const int EntityInst::getID() const { return id; }
 
- bool UnitInst::isBusy() { return false; }
+bool UnitInst::isBusy() { return false; }
 
- UnitInst::UnitInst(const UnitBP *unit) :
+UnitInst::UnitInst(const UnitBP *unit) :
     EntityInst(unit) {
-    }
+}
 
- BuildingInst::BuildingInst(const BuildingBP *building) :
+BuildingInst::BuildingInst(const BuildingBP *building) :
     EntityInst(building),
     freeBuildSlots(1),
     chronoBoostActivated(false) {
-    }
+}
 
- bool BuildingInst::isBusy() const {
+bool BuildingInst::isBusy() const {
     return freeBuildSlots == 0 || EntityInst::isBusy();
 }
 
@@ -51,9 +51,9 @@ ResourceInst::ResourceInst(const BuildingBP *building) :
             maxWorkerSlots = 16;
             miningRate.setMilliMinerals(700);
         }
-    }
+}
 
- Resources ResourceInst::mine() {
+Resources ResourceInst::mine() {
     Resources out = miningRate * maxWorkerSlots;
     if (out.getMinerals() > remaining.getMinerals())
         out.setMinerals(remaining.getMinerals());
@@ -85,11 +85,11 @@ bool ResourceInst::removeWorker(){
     return true;
 }
 
- bool ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
+bool ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
 
- bool ResourceInst::isGas() const { return miningRate.getGas() > 0; }
+bool ResourceInst::isGas() const { return miningRate.getGas() > 0; }
 
- bool ResourceInst::isMinerals() const { return miningRate.getMinerals() > 0; }
+bool ResourceInst::isMinerals() const { return miningRate.getMinerals() > 0; }
 
  WorkerInst::WorkerInst(const UnitBP *unit) :
     UnitInst(unit),
@@ -99,14 +99,14 @@ bool ResourceInst::removeWorker(){
 void WorkerInst::assignToResource(ResourceInst *r){
     workingResource = r;
 }
- BuildingStarted *WorkerInst::startBuilding(BuildingBP *bbp, int curTime) {
+BuildEntityAction *WorkerInst::startBuilding(BuildingBP *bbp, int curTime) {
     workingResource = nullptr;
     isBuilding = true;
-    return new BuildingStarted(curTime, bbp, this);
+    return new BuildEntityAction(curTime, bbp, this);
 }
 
- void WorkerInst::stopBuilding() {
+void WorkerInst::stopBuilding() {
     isBuilding = false;
     return;
 }
- bool WorkerInst::isBusy() const { return isBuilding || workingResource != nullptr; }
+bool WorkerInst::isBusy() const { return isBuilding || workingResource != nullptr; }

@@ -56,25 +56,29 @@ void MuleAction::finish(State &s) {
     s.entities.pop_back();
 }
 
-BuildingStarted::BuildingStarted(int startPoint_, BuildingBP *blueprint_ , WorkerInst *worker_) :
+BuildEntityAction::BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_) :
     Action(startPoint_,blueprint_->getBuildTime()),
     blueprint(blueprint_),
     worker(worker_),
     produced{} {
 }
 
-nlohmann::json BuildingStarted::printStartJSON() {
+nlohmann::json BuildEntityAction::printStartJSON() {
     nlohmann::json j;
     j["type"] = "build-start";
     j["name"] = blueprint->getName();
-    j["producerID"] = worker->getID();
+    if (worker != nullptr) {
+        j["producerID"] = worker->getID();
+    }
     return j;
 }
-nlohmann::json BuildingStarted::printEndJSON() {
+nlohmann::json BuildEntityAction::printEndJSON() {
     nlohmann::json j;
     j["type"] = "build-end";
     j["name"] = blueprint->getName();
-    j["producerID"] = worker->getID();
+    if (worker != nullptr) {
+        j["producerID"] = worker->getID();
+    }
     j["producedIDs"] = nlohmann::json::array();
     for (const auto ent : produced) {
         j["producedIDs"].push_back(ent->getID());
@@ -82,13 +86,13 @@ nlohmann::json BuildingStarted::printEndJSON() {
     return j;
 }
 
-void BuildingStarted::finish(State &s) {
+void BuildEntityAction::finish(State &s) {
     // stop worker to build
     worker->stopBuilding();
 
     // include new building in state
-    // TODO: create a ResourceInst for resources
-    s.entities.push_back(new BuildingInst(blueprint));
+    // TODO: create a ResourceInst/UnitInst/WorkerInst, depending on the blueprint
+    s.entities.push_back(blueprint->newInstance());
 
     // TODO: If building was upgraded, remove former building
     // check getmorphedFrom

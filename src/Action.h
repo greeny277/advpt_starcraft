@@ -51,14 +51,14 @@ class MuleAction : public AbilityAction {
         void finish(State &s);
 };
 
-class BuildingStarted : public Action {
+class BuildEntityAction : public Action {
     private:
-        BuildingBP* blueprint;
+        EntityBP* blueprint;
         WorkerInst* worker;
         std::vector<EntityInst *> produced;
 
     public:
-        BuildingStarted(int startPoint_, BuildingBP *blueprint_ , WorkerInst *worker_);
+        BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_);
         nlohmann::json printStartJSON();
         nlohmann::json printEndJSON();
         void finish(State &s);
