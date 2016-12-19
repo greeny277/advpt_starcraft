@@ -77,8 +77,10 @@ void BuildingStarted::finish(State &s) {
     worker->stopBuilding();
 
     // include new building in state
-    auto building = dynamic_cast<const BuildingBP*>(blueprint);
-    s.entities.push_back(new BuildingInst(building));
+    s.entities.push_back(new BuildingInst(blueprint));
+
+    // TODO: If building was upgraded, remove former building
+    // check getmorphedFrom
 
     return;
 }

@@ -46,7 +46,7 @@ class AbilityAction : Action {
 
 class BuildingStarted : public Action {
     private:
-    EntityBP* blueprint;
+    BuildingBP* blueprint;
     WorkerInst* worker;
 
     public:
@@ -54,4 +54,16 @@ class BuildingStarted : public Action {
     inline nlohmann::json printStartJSON();
     inline nlohmann::json printEndJSON();
     inline void finish(State &s);
+};
+
+class MuleAction : public Action {
+    private:
+        WorkerInst* mule;
+        int buildingId;
+
+    public:
+        MuleAction(int startPoint_, int timeToFinish_, int buildingId_,  WorkerInst *worker);
+        inline nlohmann::json printStartJSON();
+        inline nlohmann::json printEndJSON();
+        inline void finish(State &s);
 };
