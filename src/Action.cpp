@@ -18,13 +18,13 @@ bool Action::isReady() const { return timeToFinish <= 0; }
 AbilityAction::AbilityAction(const char *name_,
         const EntityInst *triggeredBy_,
         const BuildingInst *targetBuilding_,
-        int startPoint_):
+        int startPoint_,
+        int timeToFinish_):
     name(name_),
     triggeredBy(triggeredBy_),
     targetBuilding(targetBuilding_),
-    Action(startPoint_, 0){
+    Action(startPoint_, timeToFinish_){
     }
-// TODO Missing init of start point and timeToFinish
 
 int Action::getStartPoint() const{
     return startPoint;
@@ -45,7 +45,7 @@ nlohmann::json AbilityAction::printEndJSON() {
     return j;
 }
 MuleAction::MuleAction(int startPoint_, EntityInst *triggeredBy_, WorkerInst *worker_) :
-    AbilityAction("mule", triggeredBy_, nullptr, startPoint_),
+    AbilityAction("mule", triggeredBy_, nullptr, startPoint_, 90),
     worker(worker_) {
 }
 void MuleAction::finish(State &s) {

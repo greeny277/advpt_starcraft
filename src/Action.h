@@ -33,8 +33,8 @@ class AbilityAction : public Action {
         AbilityAction(const char *name_,
             const EntityInst *triggeredBy_,
             const BuildingInst *targetBuilding_,
-            int startPoint_);
-    // TODO Missing init of start point and timeToFinish
+            int startPoint_,
+            int timeToFinish_);
 
     public:
         nlohmann::json printStartJSON();
