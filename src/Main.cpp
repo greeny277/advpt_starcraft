@@ -13,6 +13,7 @@
 #include "EntityInst.h"
 #include "State.h"
 #include "Action.h"
+#include "Ability.h"
 
 std::unordered_map<std::string, EntityBP> readConfig() {
     std::unordered_map<std::string, EntityBP> res;
@@ -144,8 +145,21 @@ static void checkActions(State &s){
     return;
 }
 
+static bool checkAndRunAbilities(int currentTime, State &s, const std::unordered_map<std::string, EntityBP> &blueprints) {
+    for (EntityInst *e : s.entities) {
+        for (const Ability *ab : e->getBlueprint()->getAbilities()) {
+            if (e->getCurrentEnergy() >= ab->energyCosts) {
+                ab->create(currentTime, s, e, blueprints);
+                e->removeEnergy(ab->energyCosts);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 int main(int argc, char *argv[]) {
-    std::unordered_map<std::string, EntityBP> blueprints = readConfig();
+    const std::unordered_map<std::string, EntityBP> blueprints = readConfig();
     for (size_t i = 1; i < argc; i++) {
         auto initialUnits = readBuildOrder(blueprints, argv[i]);
         if(initialUnits.empty()){
@@ -178,6 +192,7 @@ int main(int argc, char *argv[]) {
                 resourceUpdate(curState);
 
                 checkActions(curState); // TODO Christian
+                checkAndRunAbilities(currentTime, curState, blueprints);
                 // TODO: assignUnitsToBuildings(buildOrder[0]) Cuong
 
                 messages.push_back(printJSON(curState, currentTime));

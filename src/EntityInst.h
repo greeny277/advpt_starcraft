@@ -19,6 +19,8 @@ class EntityInst {
         EntityInst(const EntityBP *bp);
         const EntityBP *getBlueprint();
         const int getID() const;
+        inline int getCurrentEnergy() const { return currentEnergy; }
+        inline void removeEnergy(int howMuch) { currentEnergy -= howMuch; }
 };
 class UnitInst : public EntityInst {
     public:
