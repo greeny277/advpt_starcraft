@@ -2,9 +2,29 @@
 #pragma once
 
 class Resources{
+    private:
+        int milliGas;
+        int milliMinerals;
+
     public:
-        int gas;
-        int minerals;
+        inline int getGas() const {
+            return milliGas / 1000;
+        }
+        inline int getMinerals() const {
+            return milliMinerals / 1000;
+        }
+        inline void setGas(int val) {
+            milliGas = val * 1000;
+        }
+        inline void setMinerals(int val) {
+            milliMinerals = val * 1000;
+        }
+        inline void setMilliGas(int val) {
+            milliGas = val;
+        }
+        inline void setMilliMinerals(int val) {
+            milliMinerals = val;
+        }
 
         Resources(int gas, int minerals);
 

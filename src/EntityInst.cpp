@@ -37,24 +37,33 @@ bool EntityInst::isBusy() const {
 
 ResourceInst::ResourceInst(const BuildingBP *building) :
     BuildingInst(building),
-    remaining(0, 0), // TODO: fix these values
+    remaining(0, 0),
     miningRate(0, 0),
     maxWorkerSlots(0),
     activeWorkerSlots(0) {
+        if (building->getName() == "assimilator" || building->getName() == "extractor" ||
+                building->getName() == "refinery") {
+            remaining.setGas(2500);
+            maxWorkerSlots = 3;
+            miningRate.setMilliGas(350);
+        } else {
+            remaining.setMinerals(12000);
+            maxWorkerSlots = 16;
+            miningRate.setMilliMinerals(700);
+        }
     }
 
  Resources ResourceInst::mine() {
     Resources out = miningRate * maxWorkerSlots;
-    if (out.minerals > remaining.minerals)
-        out.minerals = remaining.minerals;
-    if (out.gas > remaining.gas)
-        out.gas = remaining.gas;
+    if (out.getMinerals() > remaining.getMinerals())
+        out.setMinerals(remaining.getMinerals());
+    if (out.getGas() > remaining.getGas())
+        out.setGas(remaining.getGas());
     remaining = remaining - out;
     return out;
 }
 
-// TODO: Implement these three methods
-Resources ResourceInst::getRemainingResources(){
+Resources ResourceInst::getRemainingResources() const {
     return remaining;
 }
 
@@ -78,9 +87,9 @@ bool ResourceInst::removeWorker(){
 
  bool ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
 
- bool ResourceInst::isGas() const { return miningRate.gas > 0; }
+ bool ResourceInst::isGas() const { return miningRate.getGas() > 0; }
 
- bool ResourceInst::isMinerals() const { return miningRate.minerals > 0; }
+ bool ResourceInst::isMinerals() const { return miningRate.getMinerals() > 0; }
 
  WorkerInst::WorkerInst(const UnitBP *unit) :
     UnitInst(unit),

@@ -73,8 +73,8 @@ void resourceUpdate(State &state) {
 static nlohmann::json printJSON(State &curState, int timestamp) {
     nlohmann::json message;
     message["time"] = timestamp;
-    message["status"]["resources"]["minerals"] = curState.resources.minerals;
-    message["status"]["resources"]["vespene"] = curState.resources.gas;
+    message["status"]["resources"]["minerals"] = curState.resources.getMinerals();
+    message["status"]["resources"]["vespene"] = curState.resources.getGas();
     message["status"]["resources"]["supply"] = curState.currentMaxSupply;
     message["status"]["resources"]["supply-used"] = curState.currentSupply;
 

@@ -68,7 +68,6 @@ nlohmann::json BuildingStarted::printStartJSON() {
     j["type"] = "build-start";
     j["name"] = blueprint->getName();
     j["producerID"] = worker->getID();
-    // TODO print Building ID?
     return j;
 }
 nlohmann::json BuildingStarted::printEndJSON() {
@@ -88,6 +87,7 @@ void BuildingStarted::finish(State &s) {
     worker->stopBuilding();
 
     // include new building in state
+    // TODO: create a ResourceInst for resources
     s.entities.push_back(new BuildingInst(blueprint));
 
     // TODO: If building was upgraded, remove former building

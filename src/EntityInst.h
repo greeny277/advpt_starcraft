@@ -47,7 +47,7 @@ class ResourceInst : public BuildingInst {
     public:
         ResourceInst(const BuildingBP *building);
         Resources mine();
-        Resources getRemainingResources();
+        Resources getRemainingResources() const;
         /** Add/remove worker from resource and return true if
          * it was successful**/
         bool addWorker();

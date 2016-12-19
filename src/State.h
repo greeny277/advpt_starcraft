@@ -21,5 +21,5 @@ public:
 
 public:
     State(const std::string &race, const std::unordered_map<std::string, EntityBP> &blueprints);
-    nlohman::json getUnitJSON() const;
+    nlohmann::json getUnitJSON() const;
 };
