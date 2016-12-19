@@ -161,7 +161,6 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
                 }
             }
         }
-        
         // check if the required building for the to be produced unit exists
         auto producedByOneOf = bp->getProducedByOneOf();
         if(!producedByOneOf.empty()) {
@@ -176,6 +175,25 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
     }
 
     return true;
+}
+
+static void redistributeWorkers(State &s) {
+    for(EntityInst *entity : s.entities) {
+        auto worker = dynamic_cast<WorkerInst*>(entity);
+        if(worker != nullptr && !worker->isBusy()) {
+            // assign to new resource instance
+            for(EntityInst *entity: s.entities) {
+                auto resource = dynamic_cast<ResourceInst*>(entity);
+                if(resource != nullptr && resource->isGas() && resource->getActiveWorkerCount() < 3) {
+                    worker->assignToResource(resource);
+                    break;
+               } else if(resource != nullptr && resource->isMinerals()){
+                    worker->assignToResource(resource);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -211,7 +229,7 @@ int main(int argc, char *argv[]) {
                 resourceUpdate(curState);
 
                 checkActions(curState); // TODO Christian
-                // TODO: assignUnitsToBuildings(buildOrder[0]) Cuong
+                redistributeWorkers(curState);
 
                 messages.push_back(printJSON(curState, currentTime));
             }
