@@ -187,7 +187,7 @@ static void redistributeWorkers(State &s) {
                 if(resource != nullptr && resource->isGas() && resource->getActiveWorkerCount() < 3) {
                     worker->assignToResource(resource);
                     break;
-               } else if(resource != nullptr && resource->isMinerals()){
+                } else if(resource != nullptr && resource->isMinerals()){
                     worker->assignToResource(resource);
                     break;
                 }
@@ -239,5 +239,5 @@ int main(int argc, char *argv[]) {
         std::cout << j.dump(4) << std::endl;
     }
 
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
