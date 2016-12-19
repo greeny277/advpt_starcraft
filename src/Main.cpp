@@ -66,6 +66,7 @@ void resourceUpdate(State &state) {
         if (res != nullptr) {
             state.resources += res->mine();
         }
+        ent->restoreEnergy();
     }
 }
 
