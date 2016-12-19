@@ -155,10 +155,15 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
         auto requireOneOf = bp->getRequireOneOf();
         if(!requireOneOf.empty()) {
             for(std::string req : requireOneOf) {
-                if ( std::find(dependencies.begin(), dependencies.end(), req) == dependencies.end() ) {
+                if ( std::find(dependencies.begin(), dependencies.end(), req) != dependencies.end() ) {
+                    break;
+                } else if(req.compare(requireOneOf.back()) == 0) {
                     //required entity was not listed before this entity
                     return false;
+                } else {
+                    continue;
                 }
+            
             }
         }
         // check if the required building for the to be produced unit exists
@@ -168,6 +173,8 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
                 if ( std::find(dependencies.begin(), dependencies.end(), req) == dependencies.end() ) {
                     //required entity was not listed before this entity
                     return false;
+                } else {
+                    break;
                 }
             }
         }
