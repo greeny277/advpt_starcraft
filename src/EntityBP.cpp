@@ -1,5 +1,6 @@
 // vim: ts=4:sw=4 expandtab
 #include "EntityBP.h"
+#include "Ability.h"
 #include <sstream>
 
 EntityBP::EntityBP(std::string data[12]) :
@@ -19,6 +20,10 @@ EntityBP::EntityBP(std::string data[12]) :
         std::string req;
         while (std::getline(requirementStream, req, '/')) {
             requireOneOf.push_back(req);
+        }
+
+        if (name == "orbital_command") {
+            abilities.push_back(new MuleAbility());
         }
     }
 

@@ -44,9 +44,17 @@ nlohmann::json AbilityAction::printEndJSON() {
     nlohmann::json j;
     return j;
 }
-/*class MuleAction : AbilityAction {
-  ConcreteWorker *mule;
-  };*/
+MuleAction::MuleAction(int startPoint_, EntityInst *triggeredBy_, WorkerInst *worker_) :
+    AbilityAction("mule", triggeredBy_, nullptr, startPoint_),
+    worker(worker_) {
+}
+void MuleAction::finish(State &s) {
+    auto it = std::find(std::begin(s.entities), std::end(s.entities), worker);
+    assert(it != std::end(s.entities));
+    // move the mule to the end, then delete it
+    std::swap(*it, s.entities.back());
+    s.entities.pop_back();
+}
 
 BuildingStarted::BuildingStarted(int startPoint_, BuildingBP *blueprint_ , WorkerInst *worker_) :
     blueprint(blueprint_),

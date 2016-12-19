@@ -2,9 +2,10 @@
 #pragma once
 
 #include "Resources.h"
-#include "Ability.h"
 #include <string>
 #include <vector>
+
+class Ability;
 
 class EntityBP {
 protected:
@@ -14,7 +15,7 @@ protected:
     int startEnergy;
     int maxEnergy;
     Resources costs;
-    int buildTime;
+    int buildTime; // TODO: buildTime=0 means the entity cannot be built (in a normal way)
     std::vector<Ability*> abilities;
     std::vector<std::string> requireOneOf; // we need one of the listed entities
     std::vector<std::string> producedByOneOf; // second required entity

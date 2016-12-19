@@ -72,6 +72,7 @@ spire,200,200,100,0,0,0,0,zerg,drone ,,lair/hive
 # Terran #,,,,,,,,,,,
 ##########,,,,,,,,,,,
 scv,50,0,17,1,0,0,0,terran,,command_center/orbital_command/planetary_fortress,
+mule,0,0,0,0,0,0,0,terran,,command_center/orbital_command/planetary_fortress,
 marine,50,0,25,1,0,0,0,terran,, barracks/barracks_with_tech_lab/barracks_with_reactor,
 marauder,100,25,30,2,0,0,0,terran,, barracks_with_tech_lab ,
 reaper,50,50,45,1,0,0,0,terran,, barracks_with_tech_lab ,

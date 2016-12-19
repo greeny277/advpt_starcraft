@@ -2,18 +2,20 @@
 #pragma once
 
 #include "Action.h"
+#include <unordered_map>
 class State;
 
 class Ability {
-public:
-    int duration;
-    int energyCosts;
-    EntityInst *triggeredBy;
-    virtual void create(int, State&) = 0;
+    public:
+        const int energyCosts;
+        inline Ability(int energyCosts_) :
+            energyCosts(energyCosts_) {
+        }
+        virtual void create(int, State&, EntityInst *triggeredBy, const std::unordered_map<std::string, EntityBP> &blueprints) = 0;
 };
 
-class Mule : public Ability {
+class MuleAbility : public Ability {
     public:
-    Ability(int energyCosts);
-    MuleAction create(int startPoint, State &s);
+        MuleAbility();
+        void create(int startPoint, State &s, EntityInst *triggeredBy, const std::unordered_map<std::string, EntityBP> &blueprints);
 };

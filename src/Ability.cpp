@@ -1,14 +1,13 @@
 // vim: ts=4:sw=4 expandtab
 
 #include "Ability.h"
+#include "State.h"
 
-Mule::Mule(int energyCosts_) :
-    energyCosts(energyCosts_){
-    }
+MuleAbility::MuleAbility() : Ability(50) {
+}
 
-
-Mule::MuleAction create(int startpoint, State &s, EntityInst *triggeredBy){
-    WorkerInst mule = new Mule();
+void MuleAbility::create(int startPoint, State &s, EntityInst *triggeredBy, const std::unordered_map<std::string, EntityBP> &blueprints) {
+    WorkerInst *mule = new MuleInst(static_cast<const UnitBP*>(&blueprints.at("mule")));
     s.entities.push_back(mule);
-    return new MuleAction(startPoint, duration, triggeredBy.getID(), mule);
+    s.runningActions.push_back(new MuleAction(startPoint, triggeredBy, mule));
 }
