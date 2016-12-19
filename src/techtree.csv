@@ -88,7 +88,7 @@ battlecruiser,400,300,90,6,0,0,0,terran,,starport_with_tech_lab ,fusion_core
 #buildings,,,,,0,,,,,,
 command_center,400,0,100,0,11,0,0,terran,,scv ,
 orbital_command,150,0,35,0,11,50,200,terran,command_center,,barracks/barracks_with_tech_lab/barracks_with_reactor
-planetary_fortress,150,150,50,0,11,0,0,terran,orbital_command,,engineering_bay
+planetary_fortress,150,150,50,0,11,0,0,terran,command_center,,engineering_bay
 refinery,75,0,30,0,0,0,0,terran,,scv ,
 engineering_bay,125,0,35,0,0,0,0,terran,,scv ,
 missile_turret,100,0,25,0,0,0,0,terran,,scv ,engineering_bay
