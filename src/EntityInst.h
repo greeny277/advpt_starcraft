@@ -17,7 +17,7 @@ class EntityInst {
     public:
         virtual bool isBusy() const;
         EntityInst(const EntityBP *bp);
-        const EntityBP *getBlueprint();
+        const EntityBP *getBlueprint() const;
         const int getID() const;
         inline int getCurrentEnergy() const { return currentMicroEnergy / 1000000; }
         inline void removeEnergy(int howMuch) { currentMicroEnergy -= howMuch * 1000000; }

@@ -185,6 +185,7 @@ int main(int argc, char *argv[]) {
             while (states.size() < 1000 && !buildOrder.empty()) {
                 if (states.empty()) {
                     states.push_back(State(race, blueprints));
+                    j["initialUnits"] = states.back().getUnitJSON();
                 } else {
                     states.push_back(states.back());
                 }

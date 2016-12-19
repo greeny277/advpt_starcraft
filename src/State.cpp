@@ -28,4 +28,14 @@
         }
 
         // TODO: 1 overlord, 3 larvae
+nlohmann::json State::getUnitJSON() const {
+    nlohmann::json units;
+    for (const EntityInst *inst : entities) {
+        auto name = inst->getBlueprint()->getName();
+        if (units.find(name) == std::end(units)) {
+            units[name] = nlohmann::json::array();
+        }
+        units[name].push_back(inst->getID());
     }
+    return units;
+}

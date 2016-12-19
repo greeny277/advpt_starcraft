@@ -57,10 +57,11 @@ void MuleAction::finish(State &s) {
 }
 
 BuildingStarted::BuildingStarted(int startPoint_, BuildingBP *blueprint_ , WorkerInst *worker_) :
+    Action(startPoint_,blueprint_->getBuildTime()),
     blueprint(blueprint_),
     worker(worker_),
-    Action(startPoint_,blueprint_->getBuildTime()){
-    }
+    produced{} {
+}
 
 nlohmann::json BuildingStarted::printStartJSON() {
     nlohmann::json j;
@@ -75,8 +76,10 @@ nlohmann::json BuildingStarted::printEndJSON() {
     j["type"] = "build-end";
     j["name"] = blueprint->getName();
     j["producerID"] = worker->getID();
-    //j["producedIDs"]; // TODO malte
-    // TODO print Building ID?
+    j["producedIDs"] = nlohmann::json::array();
+    for (const auto ent : produced) {
+        j["producedIDs"].push_back(ent->getID());
+    }
     return j;
 }
 

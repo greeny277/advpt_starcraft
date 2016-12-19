@@ -15,7 +15,7 @@ bool EntityInst::isBusy() const {
     id(next_id++) {
     }
 
- const EntityBP* EntityInst::getBlueprint() { return blueprint; }
+ const EntityBP* EntityInst::getBlueprint() const { return blueprint; }
 
  const int EntityInst::getID() const { return id; }
 
