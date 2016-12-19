@@ -18,6 +18,7 @@ static std::vector<Ability*> createAbilities(const std::string &name) {
     if (name == "orbital_command") {
         abilities.push_back(new MuleAbility());
     }
+    // TODO inject, chronoboost
     return abilities;
 }
 
@@ -33,7 +34,7 @@ EntityBP::EntityBP(std::string data[15]) :
     producedByOneOf({data[10]}),
     morphedFrom({data[9]}),
     supplyProvided(std::stoi(data[5])) {
-    }
+}
 
 const std::string & EntityBP::getName() const { return name; }
 const std::string & EntityBP::getRace() const { return race; }

@@ -23,7 +23,6 @@ class EntityBP {
         const std::vector<std::string> morphedFrom; // third required entity. This entity is gone once this was built.
         const int supplyProvided;
 
-        // TODO add abilities for specific entities
         EntityBP(std::string data[15]);
 
     public:
@@ -53,9 +52,8 @@ class UnitBP : public EntityBP {
 };
 
 class BuildingBP : public EntityBP {
-    private:
-        const Resources startResources;
     public:
+        const Resources startResources;
         BuildingBP(std::string data[15]);
         EntityInst *newInstance() const;
 };

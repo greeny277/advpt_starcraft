@@ -37,24 +37,22 @@ bool BuildingInst::isBusy() const {
 
 ResourceInst::ResourceInst(const BuildingBP *building) :
     BuildingInst(building),
-    remaining(0, 0),
+    remaining(building->startResources),
     miningRate(0, 0),
     maxWorkerSlots(0),
     activeWorkerSlots(0) {
-        if (building->getName() == "assimilator" || building->getName() == "extractor" ||
-                building->getName() == "refinery") {
-            remaining.setGas(2500);
+        if (building->startResources.getGas() > 0) {
             maxWorkerSlots = 3;
             miningRate.setMilliGas(350);
         } else {
-            remaining.setMinerals(12000);
+            // TODO: fix remaining minerals for upgraded buildings
             maxWorkerSlots = 16;
             miningRate.setMilliMinerals(700);
         }
 }
 
 Resources ResourceInst::mine() {
-    Resources out = miningRate * maxWorkerSlots;
+    Resources out = miningRate * activeWorkerSlots;
     if (out.getMinerals() > remaining.getMinerals())
         out.setMinerals(remaining.getMinerals());
     if (out.getGas() > remaining.getGas())
@@ -91,7 +89,7 @@ bool ResourceInst::isGas() const { return miningRate.getGas() > 0; }
 
 bool ResourceInst::isMinerals() const { return miningRate.getMinerals() > 0; }
 
- WorkerInst::WorkerInst(const UnitBP *unit) :
+WorkerInst::WorkerInst(const UnitBP *unit) :
     UnitInst(unit),
     workingResource(nullptr),
     isBuilding(false) {

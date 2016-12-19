@@ -90,8 +90,7 @@ void BuildEntityAction::finish(State &s) {
     // stop worker to build
     worker->stopBuilding();
 
-    // include new building in state
-    // TODO: create a ResourceInst/UnitInst/WorkerInst, depending on the blueprint
+    // include new entity in state
     s.entities.push_back(blueprint->newInstance());
 
     // TODO: If building was upgraded, remove former building
