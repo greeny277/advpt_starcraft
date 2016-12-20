@@ -18,6 +18,7 @@ public:
     std::vector<EntityInst*> entities;
     int timestamp;
     std::vector<Action*> runningActions;
+    const std::unordered_map<std::string, EntityBP*> &blueprints;
 
 public:
     State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints);

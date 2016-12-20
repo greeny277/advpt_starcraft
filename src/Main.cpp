@@ -145,11 +145,11 @@ static void checkActions(State &s){
     return;
 }
 
-static bool checkAndRunAbilities(int currentTime, State &s, const std::unordered_map<std::string, EntityBP*> &blueprints) {
+static bool checkAndRunAbilities(int currentTime, State &s) {
     for (EntityInst *e : s.entities) {
         for (const Ability *ab : e->getBlueprint()->getAbilities()) {
             if (e->getCurrentEnergy() >= ab->energyCosts) {
-                ab->create(currentTime, s, e, blueprints);
+                ab->create(currentTime, s, e );
                 e->removeEnergy(ab->energyCosts);
                 return true;
             }
@@ -250,7 +250,7 @@ int main(int argc, char *argv[]) {
                 resourceUpdate(curState);
 
                 checkActions(curState); // TODO Christian
-                checkAndRunAbilities(currentTime, curState, blueprints);
+                checkAndRunAbilities(currentTime, curState);
                 redistributeWorkers(curState);
 
                 messages.push_back(printJSON(curState, currentTime));

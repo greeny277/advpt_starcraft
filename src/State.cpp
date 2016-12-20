@@ -1,12 +1,13 @@
 // vim: ts=4:sw=4 expandtab
 #include "State.h"
 
-State::State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints) :
+State::State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints_) :
     currentSupply(0),
     resources{0, 50},
     currentMaxSupply(0),
     entities{},
     timestamp(0),
+    blueprints(blueprints_),
     runningActions{} {
         bool mainBuilding = false;
         bool workers = false;
