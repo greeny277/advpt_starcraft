@@ -42,8 +42,6 @@ class AbilityAction : public Action {
 };
 class MuleAction : public AbilityAction {
     private:
-        WorkerInst* mule;
-        int buildingId;
         WorkerInst *worker;
 
     public:
