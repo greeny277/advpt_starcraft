@@ -53,7 +53,7 @@ class ResourceInst : public BuildingInst {
         bool addWorker();
         bool removeWorker();
 
-        bool getActiveWorkerCount() const;
+        int getActiveWorkerCount() const;
         bool isGas() const;
         bool isMinerals() const;
 };

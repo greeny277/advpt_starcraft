@@ -83,7 +83,7 @@ bool ResourceInst::removeWorker(){
     return true;
 }
 
-bool ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
+int ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
 
 bool ResourceInst::isGas() const { return miningRate.getGas() > 0; }
 

@@ -157,6 +157,64 @@ static bool checkAndRunAbilities(int currentTime, State &s, const std::unordered
     }
     return false;
 }
+static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string race) {
+    std::vector<std::string> dependencies;
+    for(auto bp : initialUnits) {
+        if(bp->getRace() != race) {
+            // entity to be build does not belong to the the same race as the the first declared
+            return false;
+        }
+        // check if the building has alle the required dependencies
+        auto requireOneOf = bp->getRequireOneOf();
+        if(!requireOneOf.empty()) {
+            for(std::string req : requireOneOf) {
+                if ( std::find(dependencies.begin(), dependencies.end(), req) != dependencies.end() ) {
+                    break;
+                } else if(req.compare(requireOneOf.back()) == 0) {
+                    //required entity was not listed before this entity
+                    return false;
+                } else {
+                    continue;
+                }
+            
+            }
+        }
+        // check if the required building for the to be produced unit exists
+        auto producedByOneOf = bp->getProducedByOneOf();
+        if(!producedByOneOf.empty()) {
+            for(std::string req : producedByOneOf) {
+                if ( std::find(dependencies.begin(), dependencies.end(), req) == dependencies.end() ) {
+                    //required entity was not listed before this entity
+                    return false;
+                }
+            }
+        }
+        dependencies.push_back(bp->getName());
+    }
+
+    // TODO check morphed_from
+
+    return true;
+}
+
+static void redistributeWorkers(State &s) {
+    for(EntityInst *entity : s.entities) {
+        auto worker = dynamic_cast<WorkerInst*>(entity);
+        if(worker != nullptr && !worker->isBusy()) {
+            // assign to new resource instance
+            for(EntityInst *entity: s.entities) {
+                auto resource = dynamic_cast<ResourceInst*>(entity);
+                if(resource != nullptr && resource->isGas() && resource->getActiveWorkerCount() < 3) {
+                    worker->assignToResource(resource);
+                    break;
+                } else if(resource != nullptr && resource->isMinerals()){
+                    worker->assignToResource(resource);
+                    break;
+                }
+            }
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
     const std::unordered_map<std::string, EntityBP*> blueprints = readConfig();
@@ -168,8 +226,7 @@ int main(int argc, char *argv[]) {
         }
         std::string race(initialUnits.front()->getRace());
 
-        // TODO: validateBuildOrder() Cuong
-        bool valid = true;
+        bool valid = validateBuildOrder(initialUnits, race);
         nlohmann::json j = getInitialJSON(blueprints, initialUnits, race, valid);
 
         std::queue<EntityBP*, std::vector<EntityBP*>> buildOrder(initialUnits);
@@ -194,7 +251,7 @@ int main(int argc, char *argv[]) {
 
                 checkActions(curState); // TODO Christian
                 checkAndRunAbilities(currentTime, curState, blueprints);
-                // TODO: assignUnitsToBuildings(buildOrder[0]) Cuong
+                redistributeWorkers(curState);
 
                 messages.push_back(printJSON(curState, currentTime));
             }
@@ -208,5 +265,5 @@ int main(int argc, char *argv[]) {
         std::cout << j.dump(4) << std::endl;
     }
 
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
