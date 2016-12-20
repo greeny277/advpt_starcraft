@@ -49,3 +49,12 @@ nlohmann::json State::getUnitJSON() const {
     }
     return units;
 }
+
+std::vector<EntityInst*>& State::getEntities(){
+    return entities;
+}
+
+void State::addEntityInst(EntityInst *e) {
+    alreadyProduced.insert(e->getBlueprint()->getName());
+    entities.push_back(e);
+}

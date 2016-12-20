@@ -12,12 +12,13 @@
 
 
 class State {
+private:
+    std::vector<EntityInst*> entities;
 public:
     int time;
     int currentSupply;
     Resources resources;
     int currentMaxSupply;
-    std::vector<EntityInst*> entities;
     int timestamp;
     std::vector<Action*> runningActions;
     const std::unordered_map<std::string, EntityBP*> &blueprints;
@@ -26,4 +27,6 @@ public:
 public:
     State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints);
     nlohmann::json getUnitJSON() const;
+    std::vector<EntityInst*>& getEntities();
+    void addEntityInst(EntityInst *);
 };

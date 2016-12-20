@@ -60,7 +60,7 @@ std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP*>
     return bps;
 }
 void resourceUpdate(State &state) {
-    for (EntityInst *ent : state.entities) {
+    for (EntityInst *ent : state.getEntities()) {
         ResourceInst* res = dynamic_cast<ResourceInst*>(ent);
         if (res != nullptr) {
             state.resources += res->mine();
@@ -79,7 +79,7 @@ static nlohmann::json printJSON(State &curState, int timestamp) {
 
     int mineralWorkers = 0;
     int gasWorkers = 0;
-    for (const auto & entity : curState.entities) {
+    for (const auto & entity : curState.getEntities()) {
         auto res = dynamic_cast<const ResourceInst*>(entity);
         if (res != nullptr) {
             if (res->isMinerals())
@@ -146,7 +146,7 @@ static void checkActions(State &s){
 }
 
 static bool checkAndRunAbilities(int currentTime, State &s) {
-    for (EntityInst *e : s.entities) {
+    for (EntityInst *e : s.getEntities()) {
         for (const Ability *ab : e->getBlueprint()->getAbilities()) {
             if (e->getCurrentEnergy() >= ab->energyCosts) {
                 ab->create(currentTime, s, e );
@@ -198,11 +198,11 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
 }
 
 static void redistributeWorkers(State &s) {
-    for(EntityInst *entity : s.entities) {
+    for(EntityInst *entity : s.getEntities()) {
         auto worker = dynamic_cast<WorkerInst*>(entity);
         if(worker != nullptr && !worker->isBusy()) {
             // assign to new resource instance
-            for(EntityInst *entity: s.entities) {
+            for(EntityInst *entity: s.getEntities()) {
                 auto resource = dynamic_cast<ResourceInst*>(entity);
                 if(resource != nullptr && resource->isGas() && resource->getActiveWorkerCount() < 3) {
                     worker->assignToResource(resource);

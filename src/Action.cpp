@@ -49,11 +49,11 @@ MuleAction::MuleAction(int startPoint_, EntityInst *triggeredBy_, WorkerInst *wo
     worker(worker_) {
 }
 void MuleAction::finish(State &s) {
-    auto it = std::find(std::begin(s.entities), std::end(s.entities), worker);
-    assert(it != std::end(s.entities));
+    auto it = std::find(std::begin(s.getEntities()), std::end(s.getEntities()), worker);
+    assert(it != std::end(s.getEntities()));
     // move the mule to the end, then delete it
-    std::swap(*it, s.entities.back());
-    s.entities.pop_back();
+    std::swap(*it, s.getEntities().back());
+    s.getEntities().pop_back();
 }
 
 BuildEntityAction::BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_) :
@@ -93,7 +93,7 @@ void BuildEntityAction::finish(State &s) {
     }
 
     // include new entity in state
-    s.entities.push_back(blueprint->newInstance());
+    s.addEntityInst(blueprint->newInstance());
 
     // TODO: If building was upgraded, remove former building
     // check getmorphedFrom
