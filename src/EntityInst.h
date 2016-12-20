@@ -6,6 +6,7 @@
 #include "Action.h"
 
 class BuildingStarted;
+class State;
 
 class EntityInst {
     private:
@@ -36,6 +37,7 @@ class BuildingInst : public EntityInst {
     public:
          BuildingInst(const BuildingBP *building);
          bool isBusy() const;
+         BuildEntityAction *produceUnit(UnitBP *entity, State &s);
 };
 
 class ResourceInst : public BuildingInst {

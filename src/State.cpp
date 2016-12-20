@@ -2,12 +2,14 @@
 #include "State.h"
 
 State::State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints_) :
+    time(0),
     currentSupply(0),
     resources{0, 50},
     currentMaxSupply(0),
     entities{},
     timestamp(0),
     blueprints(blueprints_),
+    alreadyProduced{},
     runningActions{} {
         bool mainBuilding = false;
         bool workers = false;

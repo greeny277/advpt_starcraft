@@ -38,6 +38,7 @@ class EntityBP {
         const std::vector<std::string>& getMorphedFrom() const;
         int getSupplyProvided() const;
         virtual EntityInst *newInstance() const = 0;
+
 };
 
 class UnitBP : public EntityBP {
@@ -56,4 +57,5 @@ class BuildingBP : public EntityBP {
         const Resources startResources;
         BuildingBP(std::string data[15]);
         EntityInst *newInstance() const;
+
 };

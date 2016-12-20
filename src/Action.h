@@ -61,3 +61,4 @@ class BuildEntityAction : public Action {
         nlohmann::json printEndJSON();
         void finish(State &s);
 };
+

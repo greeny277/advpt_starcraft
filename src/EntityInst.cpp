@@ -3,6 +3,9 @@
 #include "EntityInst.h"
 
 #include "Action.h"
+#include "State.h"
+
+#include<set>
 
 int EntityInst::next_id = 0;
 
@@ -33,6 +36,48 @@ BuildingInst::BuildingInst(const BuildingBP *building) :
 
 bool BuildingInst::isBusy() const {
     return freeBuildSlots == 0 || EntityInst::isBusy();
+}
+
+/** This method starts the mechanism of producing an unit in the building. Therefore
+ *  zergs are not covered yet.
+ *
+ *  @return: Returns either a @BuildEntityAction or
+ *  a @nullptr when any requirment is not fulfilled
+ *
+ *  **/
+BuildEntityAction *BuildingInst::produceUnit(UnitBP *entity, State &s){
+    // check for resources
+    if(!s.resources.allValuesLargerThan(entity->getCosts())){
+        // Not enough resources available
+        return nullptr;
+    }
+    // check if this building can produce the unit. Therefore get list of buildings which
+    // can produce the entity and check if this building is one of them
+    std::vector<std::string> buildingNames = entity->getProducedByOneOf();
+    auto it = std::find(std::begin(buildingNames), std::end(buildingNames), getBlueprint()->getName());
+    if(it == std::end(buildingNames)){
+        // this building can not produce the unit
+        return nullptr;
+    }
+
+    // check requirements
+    std::vector<std::string> requirementNames = entity->getRequireOneOf();
+    bool foundRequirement = false;
+    for(auto it = requirementNames.begin(); it != requirementNames.end(); it++){
+        auto iterProduced = std::find(std::begin(s.alreadyProduced), std::end(s.alreadyProduced), *it);
+        if(iterProduced != std::end(s.alreadyProduced)){
+            foundRequirement = true;
+            break;
+        }
+    }
+    if(!foundRequirement){
+        return nullptr;
+    }
+
+    // change state
+    s.resources -= entity->getCosts();
+
+    return new BuildEntityAction(s.time, entity, nullptr);
 }
 
 ResourceInst::ResourceInst(const BuildingBP *building) :

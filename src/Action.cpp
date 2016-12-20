@@ -88,7 +88,9 @@ nlohmann::json BuildEntityAction::printEndJSON() {
 
 void BuildEntityAction::finish(State &s) {
     // stop worker to build
-    worker->stopBuilding();
+    if(worker != nullptr){
+        worker->stopBuilding();
+    }
 
     // include new entity in state
     s.entities.push_back(blueprint->newInstance());

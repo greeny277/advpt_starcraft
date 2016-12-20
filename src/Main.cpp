@@ -246,6 +246,8 @@ int main(int argc, char *argv[]) {
                     states.push_back(states.back());
                 }
                 State &curState = states.back();
+                // increment time attribut
+                curState.time++;
                 int currentTime = states.size();
                 resourceUpdate(curState);
 
