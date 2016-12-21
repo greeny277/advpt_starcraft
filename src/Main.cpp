@@ -61,12 +61,12 @@ std::vector<EntityBP*> readBuildOrder(const std::unordered_map<std::string, Enti
 }
 void resourceUpdate(State &state) {
     state.iterEntities([&](EntityInst& ent) {
-            ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
-            if (res != nullptr) {
+        ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
+        if (res != nullptr) {
             state.resources += res->mine();
-            }
-            ent.restoreEnergy();
-            });
+        }
+        ent.restoreEnergy();
+    });
 }
 
 template<typename T>
