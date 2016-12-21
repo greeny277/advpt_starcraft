@@ -54,10 +54,10 @@ class BuildEntityAction : public Action {
         EntityBP* blueprint;
         WorkerInst* worker;
         std::vector<EntityInst *> produced;
-        BuildingInst* producedBy;
+        EntityInst* producedBy;
 
     public:
-        BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_, BuildingInst *);
+        BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_, EntityInst *);
         nlohmann::json printStartJSON();
         nlohmann::json printEndJSON();
         void finish(State &s);

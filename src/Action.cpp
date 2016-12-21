@@ -57,7 +57,7 @@ void MuleAction::finish(State &s) {
 }
 
 BuildEntityAction::BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_,
-        BuildingInst *producedBy_) :
+        EntityInst *producedBy_) :
     Action(startPoint_,blueprint_->getBuildTime()),
     blueprint(blueprint_),
     worker(worker_),
@@ -99,14 +99,14 @@ void BuildEntityAction::finish(State &s) {
     }
     if(producedBy != nullptr){
         // increase freeBuildSlots
-        producedBy->incFreeBuildSlots();
+        auto building = dynamic_cast<BuildingInst*>(producedBy);
+        if (building != nullptr) {
+            building->incFreeBuildSlots();
+        }
+        // TODO: Check if entity is morphing
     }
 
     // include new entity in state
     s.addEntityInst(blueprint->newInstance());
-
-    // TODO: If building was upgraded, remove former building
-    // check getmorphedFrom
-
     return;
 }
