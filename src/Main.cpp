@@ -182,7 +182,6 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
                 } else {
                     continue;
                 }
-            
             }
         }
         // check if the required building for the to be produced unit exists
@@ -195,14 +194,25 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
                 }
             }
         }
+
+        auto morphedFrom = bp->getMorphedFrom();
+        if(!morphedFrom.empty()) {
+            for(std::string req : morphedFrom) {
+                auto position =  std::find(dependencies.begin(), dependencies.end(), req);
+                if (position == dependencies.end()) {
+                    //required entity was not listed before this entity
+                    return false;
+                } else {
+                    dependencies.erase(position);
+                    break;
+                }
+            }
+        }
+
         dependencies.push_back(bp->getName());
     }
-
-    // TODO check morphed_from
-
     return true;
 }
-
 static void redistributeWorkers(State &s) {
     for(auto& worker : s.getWorkers()) {
         if(!worker.second.isBusy()) {
