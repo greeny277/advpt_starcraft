@@ -15,10 +15,13 @@ class EntityInst {
         bool morphing; // when the unit is currently upgrading, the entity cannot do anything else
         const int id;
         static int next_id;
+    protected:
+        bool checkBuildRequirements(EntityBP*, State&);
     public:
         virtual bool isBusy() const;
         bool isMorphing() const;
         void setMorphing(bool b);
+        bool startMorphing(EntityBP *, State &s);
         EntityInst(const EntityBP *bp);
         const EntityBP *getBlueprint() const;
         const int getID() const;
@@ -39,7 +42,7 @@ class BuildingInst : public EntityInst {
     public:
          BuildingInst(const BuildingBP *building);
          bool isBusy() const;
-         BuildEntityAction *produceUnit(UnitBP *entity, State &s);
+         bool produceUnit(UnitBP *entity, State &s);
          void incFreeBuildSlots();
 };
 

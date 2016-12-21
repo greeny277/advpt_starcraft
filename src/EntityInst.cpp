@@ -13,12 +13,66 @@ bool EntityInst::isBusy() const {
     return morphing;
 }
 
+bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
+    // check free slots
+    if(isBusy()) {
+        return false;
+    }
+    // check for resources
+    if(!s.resources.allValuesLargerThan(entity->getCosts())){
+        // Not enough resources available
+        return false;
+    }
+    // TODO: supply
+
+    // check requirements
+    std::vector<std::string> requirementNames = entity->getRequireOneOf();
+    bool foundRequirement = false;
+    for(auto it = requirementNames.begin(); it != requirementNames.end(); it++){
+        auto iterProduced = std::find(std::begin(s.alreadyProduced), std::end(s.alreadyProduced), *it);
+        if(iterProduced != std::end(s.alreadyProduced)){
+            foundRequirement = true;
+            break;
+        }
+    }
+    if(!foundRequirement){
+        return false;
+    }
+
+    // check if this building can produce the unit. Therefore get list of buildings which
+    // can produce the entity and check if this building is one of them
+    std::vector<std::string> buildingNames = entity->getProducedByOneOf();
+    auto it = std::find(std::begin(buildingNames), std::end(buildingNames), getBlueprint()->getName());
+    if(it == std::end(buildingNames)){
+        // this building can not produce the unit
+        return false;
+    }
+
+    return true;
+}
 bool EntityInst::isMorphing() const {
     return morphing;
 }
 
 void EntityInst::setMorphing(bool b){
     morphing =  b;
+}
+bool EntityInst::startMorphing(EntityBP *entity, State &s) {
+    if (!checkBuildRequirements(entity, s)) {
+        return false;
+    }
+    bool foundBp = false;
+    for (auto bp : entity->getMorphedFrom()) {
+        if (blueprint->getName() == bp)
+            foundBp = true;
+    }
+    if (!foundBp)
+        return false;
+    // TODO: if this is a building that can do more than one thing, check that we are really doing nothing right now
+
+
+    s.buildActions.push_back(BuildEntityAction(s.time, entity, -1, getID()));
+    return true;
 }
 
 EntityInst::EntityInst(const EntityBP *bp) :
@@ -53,45 +107,15 @@ bool BuildingInst::isBusy() const {
  *  a @nullptr when any requirment is not fulfilled
  *
  *  **/
-BuildEntityAction *BuildingInst::produceUnit(UnitBP *entity, State &s){
-    // check free slots
-    if(freeBuildSlots == 0){
-        return nullptr;
+bool BuildingInst::produceUnit(UnitBP *entity, State &s) {
+    if (!checkBuildRequirements(entity, s) || !entity->getMorphedFrom().empty()) {
+        return false;
     }
-    // check for resources
-    if(!s.resources.allValuesLargerThan(entity->getCosts())){
-        // Not enough resources available
-        return nullptr;
-    }
-    // check if this building can produce the unit. Therefore get list of buildings which
-    // can produce the entity and check if this building is one of them
-    std::vector<std::string> buildingNames = entity->getProducedByOneOf();
-    auto it = std::find(std::begin(buildingNames), std::end(buildingNames), getBlueprint()->getName());
-    if(it == std::end(buildingNames)){
-        // this building can not produce the unit
-        return nullptr;
-    }
-
-    // check requirements
-    std::vector<std::string> requirementNames = entity->getRequireOneOf();
-    bool foundRequirement = false;
-    for(auto it = requirementNames.begin(); it != requirementNames.end(); it++){
-        auto iterProduced = std::find(std::begin(s.alreadyProduced), std::end(s.alreadyProduced), *it);
-        if(iterProduced != std::end(s.alreadyProduced)){
-            foundRequirement = true;
-            break;
-        }
-    }
-    if(!foundRequirement){
-        return nullptr;
-    }
-
-    // change state
-    s.resources -= entity->getCosts();
 
     freeBuildSlots--;
 
-    return new BuildEntityAction(s.time, entity, -1, getID());
+    s.buildActions.push_back(BuildEntityAction(s.time, entity, -1, getID(), s));
+    return true;
 }
 
 void BuildingInst::incFreeBuildSlots(){
@@ -163,7 +187,7 @@ void WorkerInst::assignToResource(ResourceInst& r){
 BuildEntityAction *WorkerInst::startBuilding(BuildingBP *bbp, int curTime) {
     workingResource = -1;
     isBuilding = true;
-    return new BuildEntityAction(curTime, bbp, getID(), -1);
+    return new BuildEntityAction(curTime, bbp, getID(), -1, s);
 }
 
 void WorkerInst::stopBuilding() {

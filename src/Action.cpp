@@ -54,12 +54,18 @@ void MuleAction::finish(State &s) {
 }
 
 BuildEntityAction::BuildEntityAction(int startPoint_, EntityBP *blueprint_ , int worker_,
-        int producedBy_) :
+        int producedBy_, State &s) :
     Action(startPoint_,blueprint_->getBuildTime()),
     blueprint(blueprint_),
     worker(worker_),
     producedBy(producedBy_),
     produced{} {
+
+    // change state
+    s.resources -= blueprint->getCosts();
+
+    // TODO: suppply neu berechnen
+
 }
 
 nlohmann::json BuildEntityAction::printStartJSON() {
