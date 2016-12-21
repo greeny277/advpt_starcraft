@@ -31,7 +31,7 @@ EntityBP::EntityBP(std::string data[15]) :
     buildTime(std::stoi(data[3])),
     abilities(createAbilities(name)),
     requireOneOf(parseRequirements(data[11])),
-    producedByOneOf({data[10]}),
+    producedByOneOf(parseRequirements(data[10])),
     morphedFrom({data[9]}),
     supplyProvided(std::stoi(data[5])) {
 }
