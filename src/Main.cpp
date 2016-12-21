@@ -45,7 +45,7 @@ std::unordered_map<std::string, EntityBP*> readConfig() {
 }
 
 
-std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP*> blueprints, char *fname) {
+std::vector<EntityBP*> readBuildOrder(const std::unordered_map<std::string, EntityBP*> &blueprints, const char *const fname) {
     std::vector<EntityBP*> bps;
     std::fstream input;
     input.open(fname);
@@ -153,14 +153,14 @@ static void checkActions(std::vector<T>& actions, State& s){
 static bool checkAndRunAbilities(int currentTime, State &s) {
     bool result = false;
     s.iterEntities([&](EntityInst& e) {
-            for (const Ability *ab : e.getBlueprint()->getAbilities()) {
-            if (e.getCurrentEnergy() >= ab->energyCosts) {
-            ab->create(currentTime, s, e.getID());
-            e.removeEnergy(ab->energyCosts);
-            result = true;
+        for (const Ability *ab : e.getBlueprint()->getAbilities()) {
+            if (e.getCurrentEnergy() >= ab->energyCosts && !result) {
+                ab->create(currentTime, s, e.getID());
+                e.removeEnergy(ab->energyCosts);
+                result = true;
             }
-            }
-            });
+        }
+    });
     return result;
 }
 
@@ -179,7 +179,7 @@ static bool buildOrderCheckOneOf(std::vector<std::string> oneOf, std::vector<std
 
 }
 
-static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string race,std::unordered_map<std::string, EntityBP*> blueprints ) {
+static bool validateBuildOrder(const std::vector<EntityBP*> &initialUnits, const std::string race, const std::unordered_map<std::string, EntityBP*> &blueprints ) {
     State s(race, blueprints);
     std::vector<std::string> dependencies;
     for(auto unit: s.getUnits()) {
@@ -229,15 +229,78 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
     }
     return true;
 }
-static void redistributeWorkers(State &s) {
+
+static bool tryBuild(WorkerInst &worker, EntityBP *entity, State &s) {
+    if (entity->getMorphedFrom().empty()) {
+        // TODO: tell the worker to build a completely new building
+    } else if (dynamic_cast<BuildingBP*>(entity) != nullptr) {
+        // TODO: find a non-busy entity to upgrade
+        //auto buildAction = worker.produceBuilding(buildOrder.front(), s);
+    } else {
+        // TODO: find a building with free slots
+        //auto buildAction = worker.produceUnit(buildOrder.front(), s);
+    }
+    return false;
+}
+static void redistributeWorkers(State &s, std::queue<EntityBP*, std::vector<EntityBP*>> &buildOrder, bool doBuild) {
+    std::vector<WorkerInst *> idleWorkers;
+    std::vector<WorkerInst *> mineralWorkers;
+    std::vector<WorkerInst *> gasWorkers;
     for(auto& worker : s.getWorkers()) {
         if(!worker.second.isBusy()) {
-            // assign to new resource instance
-            for(auto& resource: s.getResources()) {
-                if((resource.second.isGas() && resource.second.getActiveWorkerCount() < 3) || resource.second.isMinerals()) {
-                    worker.second.assignToResource(resource.second);
-                    break;
+            idleWorkers.push_back(&worker.second);
+        } else if (worker.second.isMiningMinerals(s)) {
+            mineralWorkers.push_back(&worker.second);
+        } else if (worker.second.isMiningGas(s)) {
+            gasWorkers.push_back(&worker.second);
+        }
+    }
+
+    if (doBuild) {
+        // find the "best" worker to build something, and try to do so
+        std::array<std::vector<WorkerInst *>*, 3> workerLists{&idleWorkers, &mineralWorkers, &gasWorkers};
+        for (auto workers : workerLists) {
+            if (!workers->empty()) {
+                // TODO: cancel any mining
+                if (tryBuild(*workers->back(), buildOrder.front(), s)) {
+                    workers->pop_back();
                 }
+                break;
+            }
+        }
+    }
+
+    std::vector<ResourceInst *> minerals;
+    std::vector<ResourceInst *> gas;
+    for (auto res : s.getResources()) {
+        if (res.second.isMinerals()) {
+            minerals.push_back(&res.second);
+        } else {
+            gas.push_back(&res.second);
+        }
+    }
+    size_t workerCount = idleWorkers.size() + mineralWorkers.size() + gasWorkers.size();
+    size_t gasWorkerCount = std::min(workerCount - 1, gas.size() * 3);
+    size_t mineralWorkerCount = std::min(workerCount - gasWorkerCount, minerals.size() * 16);
+
+    if (gasWorkers.size() < gasWorkerCount) {
+        std::array<std::vector<WorkerInst *>*, 2> workerLists{&idleWorkers, &mineralWorkers};
+        for (auto g : gas) {
+            if (g->getFreeWorkerCount() == 0)
+                continue;
+
+            for (auto workers : workerLists) {
+                for (auto worker : *workers) {
+                    worker->assignToResource(*g);
+                }
+            }
+        }
+    }
+    if (!idleWorkers.empty() && mineralWorkerCount != mineralWorkers.size()) {
+        for (auto worker : idleWorkers) {
+            for (auto m : minerals) {
+                if (m->getFreeWorkerCount() > 0)
+                    worker->assignToResource(*m);
             }
         }
     }
@@ -274,15 +337,21 @@ int main(int argc, char *argv[]) {
                 // increment time attribut
                 curState.time++;
                 int currentTime = states.size();
+
+                // timestep 1
                 resourceUpdate(curState);
 
-                checkActions(curState.muleActions, curState);
+                // timestep 2
                 checkActions(curState.buildActions, curState);
 
-                checkAndRunAbilities(currentTime, curState);
+                // timestep 3
+                checkActions(curState.muleActions, curState);
+                bool canBuild = checkAndRunAbilities(currentTime, curState);
 
-                redistributeWorkers(curState);
+                // timestep 4
+                redistributeWorkers(curState, buildOrder, canBuild);
 
+                // timestep 5
                 messages.push_back(printJSON(curState, currentTime));
             }
 

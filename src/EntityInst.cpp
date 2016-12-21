@@ -19,11 +19,18 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
         return false;
     }
     // check for resources
-    if(!s.resources.allValuesLargerThan(entity->getCosts())){
+    if(!s.resources.allValuesLargerThan(entity->getCosts())) {
         // Not enough resources available
         return false;
     }
-    // TODO: supply
+    // check if this building can produce the unit. Therefore get list of buildings which
+    // can produce the entity and check if this building is one of them
+    std::vector<std::string> buildingNames = entity->getProducedByOneOf();
+    auto it = std::find(std::begin(buildingNames), std::end(buildingNames), getBlueprint()->getName());
+    if(it == std::end(buildingNames)){
+        // this building can not produce the unit
+        return false;
+    }
 
     // check requirements
     std::vector<std::string> requirementNames = entity->getRequireOneOf();
@@ -35,18 +42,10 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
             break;
         }
     }
-    if(!foundRequirement){
+    if(!foundRequirement)
         return false;
-    }
 
-    // check if this building can produce the unit. Therefore get list of buildings which
-    // can produce the entity and check if this building is one of them
-    std::vector<std::string> buildingNames = entity->getProducedByOneOf();
-    auto it = std::find(std::begin(buildingNames), std::end(buildingNames), getBlueprint()->getName());
-    if(it == std::end(buildingNames)){
-        // this building can not produce the unit
-        return false;
-    }
+    // TODO: supply
 
     return true;
 }
@@ -70,8 +69,7 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
         return false;
     // TODO: if this is a building that can do more than one thing, check that we are really doing nothing right now
 
-
-    s.buildActions.push_back(BuildEntityAction(s.time, entity, -1, getID()));
+    s.buildActions.push_back(BuildEntityAction(s.time, entity, -1, getID(), s));
     return true;
 }
 
@@ -171,6 +169,7 @@ bool ResourceInst::removeWorker(){
 }
 
 int ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
+int ResourceInst::getFreeWorkerCount() const { return maxWorkerSlots - activeWorkerSlots; }
 
 bool ResourceInst::isGas() const { return miningRate.getGas() > 0; }
 
@@ -184,9 +183,10 @@ WorkerInst::WorkerInst(const UnitBP *unit) :
 void WorkerInst::assignToResource(ResourceInst& r){
     workingResource = r.getID();
 }
-BuildEntityAction *WorkerInst::startBuilding(BuildingBP *bbp, int curTime) {
+BuildEntityAction *WorkerInst::startBuilding(BuildingBP *bbp, int curTime, State &s) {
     workingResource = -1;
     isBuilding = true;
+    // TODO: check requirements
     return new BuildEntityAction(curTime, bbp, getID(), -1, s);
 }
 
@@ -195,3 +195,15 @@ void WorkerInst::stopBuilding() {
     return;
 }
 bool WorkerInst::isBusy() const { return isBuilding || workingResource != -1; }
+bool WorkerInst::isMiningGas(State &s) const {
+    if (workingResource == -1)
+        return false;
+
+    return s.getResources().at(workingResource).isGas();
+}
+bool WorkerInst::isMiningMinerals(State &s) const {
+    if (workingResource == -1)
+        return false;
+
+    return s.getResources().at(workingResource).isMinerals();
+}

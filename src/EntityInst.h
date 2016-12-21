@@ -62,6 +62,7 @@ class ResourceInst : public BuildingInst {
         bool removeWorker();
 
         int getActiveWorkerCount() const;
+        int getFreeWorkerCount() const;
         bool isGas() const;
         bool isMinerals() const;
 };
@@ -73,9 +74,11 @@ class WorkerInst : public UnitInst {
     public:
         WorkerInst(const UnitBP *unit);
         void assignToResource(ResourceInst& r);
-        BuildEntityAction *startBuilding(BuildingBP *bbp, int curTime);
+        BuildEntityAction *startBuilding(BuildingBP *bbp, int curTime, State&);
         void stopBuilding();
         bool isBusy() const;
+        bool isMiningMinerals(State&) const;
+        bool isMiningGas(State&) const;
 };
 
 class MuleInst : public WorkerInst {
