@@ -185,6 +185,7 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
                     return false;
                 } else {
                     dependencies.erase(position);
+                    break;
                 }
             }
         }
