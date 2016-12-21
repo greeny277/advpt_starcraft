@@ -347,7 +347,7 @@ int main(int argc, char *argv[]) {
                             canBuild = ent.startMorphing(buildNext, curState);
                         });
                     } else if(unit != nullptr) {
-                        // find a building with where we can build the unit
+                        // find a building where we can build the unit
                         curState.iterEntities([&](EntityInst &ent) {
                             auto building = dynamic_cast<BuildingInst*>(&ent);
                             if (!canBuild || building == nullptr)
@@ -357,7 +357,7 @@ int main(int argc, char *argv[]) {
                     } else {
                         // have redistributeWorkers() build the building
                         auto building = dynamic_cast<BuildingBP*>(buildNext);
-                        assert(building != nullptr);
+                        assert(building != nullptr && "no idea how to build this thing");
                         workerTask = building;
                     }
                 }

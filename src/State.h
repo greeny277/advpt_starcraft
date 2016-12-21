@@ -31,14 +31,18 @@ public:
 public:
     State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints);
     nlohmann::json getUnitJSON();
-    // TODO The returning vector should be const later on
     std::map<int, WorkerInst>& getWorkers();
     std::map<int, BuildingInst>& getBuildings();
     std::map<int, UnitInst>& getUnits();
     std::map<int, ResourceInst>& getResources();
+    const std::map<int, WorkerInst>& getWorkers() const;
+    const std::map<int, BuildingInst>& getBuildings() const;
+    const std::map<int, UnitInst>& getUnits() const;
+    const std::map<int, ResourceInst>& getResources() const;
     void addWorkerInst(WorkerInst);
     void addBuildingInst(BuildingInst);
     void addUnitInst(UnitInst);
     void addResourceInst(ResourceInst);
     void iterEntities(std::function<void(EntityInst&)>);
+    void iterEntities(std::function<void(const EntityInst&)>) const;
 };

@@ -72,6 +72,10 @@ void State::iterEntities(std::function<void(EntityInst&)> f) {
         f(i.second);
     }
 }
+void State::iterEntities(std::function<void(const EntityInst&)> f) const {
+    auto callback = [&] (EntityInst &ent) { f(const_cast<EntityInst&>(ent)); };
+    const_cast<State*>(this)->iterEntities(callback);
+}
 
 std::map<int,WorkerInst>& State::getWorkers(){
     return workerMap;
@@ -83,6 +87,18 @@ std::map<int,UnitInst>& State::getUnits(){
     return unitMap;
 }
 std::map<int,ResourceInst>& State::getResources(){
+    return resourceMap;
+}
+const std::map<int,WorkerInst>& State::getWorkers() const {
+    return workerMap;
+}
+const std::map<int,BuildingInst>& State::getBuildings() const {
+    return buildingMap;
+}
+const std::map<int,UnitInst>& State::getUnits() const {
+    return unitMap;
+}
+const std::map<int,ResourceInst>& State::getResources() const {
     return resourceMap;
 }
 
