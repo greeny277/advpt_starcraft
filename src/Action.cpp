@@ -56,10 +56,12 @@ void MuleAction::finish(State &s) {
     s.getEntities().pop_back();
 }
 
-BuildEntityAction::BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_) :
+BuildEntityAction::BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_,
+        BuildingInst *producedBy_) :
     Action(startPoint_,blueprint_->getBuildTime()),
     blueprint(blueprint_),
     worker(worker_),
+    producedBy(producedBy_),
     produced{} {
 }
 
@@ -90,6 +92,10 @@ void BuildEntityAction::finish(State &s) {
     // stop worker to build
     if(worker != nullptr){
         worker->stopBuilding();
+    }
+    if(producedBy != nullptr){
+        // increase freeBuildSlots
+        producedBy->incFreeBuildSlots();
     }
 
     // include new entity in state

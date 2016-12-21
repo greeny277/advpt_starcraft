@@ -27,6 +27,7 @@ public:
 public:
     State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints);
     nlohmann::json getUnitJSON() const;
+    // TODO The returning vector should be const later on
     std::vector<EntityInst*>& getEntities();
     void addEntityInst(EntityInst *);
 };

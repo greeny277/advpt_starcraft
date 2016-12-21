@@ -46,6 +46,10 @@ bool BuildingInst::isBusy() const {
  *
  *  **/
 BuildEntityAction *BuildingInst::produceUnit(UnitBP *entity, State &s){
+    // check free slots
+    if(freeBuildSlots == 0){
+        return nullptr;
+    }
     // check for resources
     if(!s.resources.allValuesLargerThan(entity->getCosts())){
         // Not enough resources available
@@ -77,7 +81,13 @@ BuildEntityAction *BuildingInst::produceUnit(UnitBP *entity, State &s){
     // change state
     s.resources -= entity->getCosts();
 
-    return new BuildEntityAction(s.time, entity, nullptr);
+    freeBuildSlots--;
+
+    return new BuildEntityAction(s.time, entity, nullptr, this);
+}
+
+void BuildingInst::incFreeBuildSlots(){
+    freeBuildSlots++;
 }
 
 ResourceInst::ResourceInst(const BuildingBP *building) :
@@ -145,7 +155,7 @@ void WorkerInst::assignToResource(ResourceInst *r){
 BuildEntityAction *WorkerInst::startBuilding(BuildingBP *bbp, int curTime) {
     workingResource = nullptr;
     isBuilding = true;
-    return new BuildEntityAction(curTime, bbp, this);
+    return new BuildEntityAction(curTime, bbp, this, nullptr);
 }
 
 void WorkerInst::stopBuilding() {

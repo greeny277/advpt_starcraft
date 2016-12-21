@@ -25,6 +25,7 @@ class EntityBP {
 
         EntityBP(std::string data[15]);
 
+
     public:
         const std::string & getName() const;
         const std::string & getRace() const;
@@ -53,6 +54,7 @@ class UnitBP : public EntityBP {
 };
 
 class BuildingBP : public EntityBP {
+    //TODO: Add maxBuildSlots
     public:
         const Resources startResources;
         BuildingBP(std::string data[15]);

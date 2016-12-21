@@ -38,6 +38,7 @@ class BuildingInst : public EntityInst {
          BuildingInst(const BuildingBP *building);
          bool isBusy() const;
          BuildEntityAction *produceUnit(UnitBP *entity, State &s);
+         void incFreeBuildSlots();
 };
 
 class ResourceInst : public BuildingInst {
