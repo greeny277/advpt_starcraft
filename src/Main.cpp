@@ -340,11 +340,22 @@ int main(int argc, char *argv[]) {
                     auto buildNext = buildOrder.front();
                     auto unit = dynamic_cast<UnitBP*>(buildNext);
                     if (buildNext->getMorphedFrom().size()) {
-                        // TODO: find a non-busy entity to upgrade
+                        // find a non-busy entity to upgrade/morph
+                        curState.iterEntities([&](EntityInst &ent) {
+                            if (!canBuild)
+                                return;
+                            canBuild = ent.startMorphing(buildNext, curState);
+                        });
                     } else if(unit != nullptr) {
-                        // TODO: find a building with free slots
-                        //auto buildAction = worker.produceUnit(buildOrder.front(), s);
+                        // find a building with where we can build the unit
+                        curState.iterEntities([&](EntityInst &ent) {
+                            auto building = dynamic_cast<BuildingInst*>(&ent);
+                            if (!canBuild || building == nullptr)
+                                return;
+                            canBuild = building->produceUnit(unit, curState);
+                        });
                     } else {
+                        // have redistributeWorkers() build the building
                         auto building = dynamic_cast<BuildingBP*>(buildNext);
                         assert(building != nullptr);
                         workerTask = building;
