@@ -15,26 +15,30 @@ State::State(const std::string &race, const std::unordered_map<std::string, Enti
     alreadyProduced{},
     buildActions{},
     muleActions{} {
-        bool mainBuilding = false;
-        bool workers = false;
-        for (const auto bp : blueprints) {
-            if (bp.second->getRace() == race) {
-                auto building = dynamic_cast<const BuildingBP*>(bp.second);
-                if (building != nullptr && !mainBuilding) {
-                    building->newInstance(*this);
-                    mainBuilding = true;
-                }
-                auto unit = dynamic_cast<const UnitBP*>(bp.second);
-                if (unit != nullptr && !workers) {
-                    for (size_t i = 0; i < 6; i++) {
-                        unit->newInstance(*this);
-                    }
-                    workers = true;
-                }
+
+        if(race == "protoss") {
+            auto probe = static_cast<const UnitBP*>(blueprints.at("probe"));
+            for (size_t i = 0; i < 6; i++) {
+                probe->newInstance(*this);
             }
+            blueprints.at("nexus")->newInstance(*this);
+        }
+
+        if(race == "terran") {
+            auto scv = static_cast<const UnitBP*>(blueprints.at("scv"));
+            for (size_t i = 0; i < 6; i++) {
+                scv->newInstance(*this);
+            }
+            blueprints.at("command_center")->newInstance(*this);
         }
 
         if (race == "zerg") {
+            auto drone = static_cast<const UnitBP*>(blueprints.at("drone"));
+            for (size_t i = 0; i < 6; i++) {
+                drone->newInstance(*this);
+            }
+            blueprints.at("hatchery")->newInstance(*this);
+
             auto larva = static_cast<const UnitBP*>(blueprints.at("larva"));
             for (size_t i = 0; i < 3; i++) {
                 larva->newInstance(*this);
