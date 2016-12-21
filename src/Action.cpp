@@ -71,6 +71,8 @@ nlohmann::json BuildEntityAction::printStartJSON() {
     j["name"] = blueprint->getName();
     if (worker != nullptr) {
         j["producerID"] = worker->getID();
+    } else if (producedBy != nullptr){
+        j["producerID"] = producedBy->getID();
     }
     return j;
 }
@@ -80,6 +82,8 @@ nlohmann::json BuildEntityAction::printEndJSON() {
     j["name"] = blueprint->getName();
     if (worker != nullptr) {
         j["producerID"] = worker->getID();
+    } else if (producedBy != nullptr){
+        j["producerID"] = producedBy->getID();
     }
     j["producedIDs"] = nlohmann::json::array();
     for (const auto ent : produced) {
