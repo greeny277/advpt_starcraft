@@ -13,6 +13,14 @@ bool EntityInst::isBusy() const {
     return morphing;
 }
 
+bool EntityInst::isMorphing() const {
+    return morphing;
+}
+
+void EntityInst::setMorphing(bool b){
+    morphing =  b;
+}
+
 EntityInst::EntityInst(const EntityBP *bp) :
     blueprint(bp),
     id(next_id++) {

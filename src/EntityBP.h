@@ -39,7 +39,7 @@ class EntityBP {
         const std::vector<std::string>& getProducedByOneOf() const;
         const std::vector<std::string>& getMorphedFrom() const;
         int getSupplyProvided() const;
-        virtual void newInstance(State&) const = 0;
+        virtual int newInstance(State&) const = 0;
 
 };
 
@@ -51,7 +51,7 @@ class UnitBP : public EntityBP {
     public:
         UnitBP(std::string data[15]);
         int getSupplyCost();
-        void newInstance(State&) const;
+        int newInstance(State&) const;
 };
 
 class BuildingBP : public EntityBP {
@@ -59,6 +59,6 @@ class BuildingBP : public EntityBP {
     public:
         const Resources startResources;
         BuildingBP(std::string data[15]);
-        void newInstance(State&) const;
+        int newInstance(State&) const;
 
 };

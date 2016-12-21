@@ -90,19 +90,61 @@ nlohmann::json BuildEntityAction::printEndJSON() {
 }
 
 void BuildEntityAction::finish(State &s) {
+    bool prodUnitsInBuilding = false;
     // stop worker to build
     if(worker != -1){
         s.getWorkers().at(worker).stopBuilding();
     }
     if(producedBy != -1){
-        // increase freeBuildSlots
-        auto building = s.getBuildings().find(producedBy);
-        if(building != s.getBuildings().end()) {
+        if(s.getBuildings().find(producedBy) != s.getBuildings().end()) {
+            auto building = s.getBuildings().find(producedBy);
+            // increase freeBuildSlots
             building->second.incFreeBuildSlots();
-        // TODO: Check if entity is morphing
+            // Does the building produce units
+            auto unit = dynamic_cast<const UnitBP*>(building->second.getBlueprint());
+            if(unit != nullptr){
+                prodUnitsInBuilding = true;
+            }
+            // Check if building is morphing
+            if(building->second.isMorphing()){
+                s.getBuildings().erase(building);
+            }
+        }
+        // Check if worker is morphing
+        else if(s.getWorkers().find(producedBy) != s.getWorkers().end()) {
+            auto worker = s.getWorkers().find(producedBy);
+            if(worker->second.isMorphing()){
+                s.getWorkers().erase(worker);
+            }
+        }
+        // Check if unit is morphing
+        else if(s.getUnits().find(producedBy) != s.getUnits().end()) {
+            auto unit = s.getUnits().find(producedBy);
+            if(unit->second.isMorphing()){
+                s.getUnits().erase(unit);
+            }
+        }
+        else{
+            // A resource is morphing
+            auto resource = s.getResources().find(producedBy);
+            if(resource == s.getResources().end()){
+                std::cerr << "BuildEntityAction::finish(): Bad error. Couldn't find any instance in state to given Producer-ID" << std::endl;
+            }
+            auto unit = dynamic_cast<const UnitBP*>(resource->second.getBlueprint());
+            if(unit != nullptr){
+                prodUnitsInBuilding = true;
+            }
+            if(resource->second.isMorphing()){
+                s.getResources().erase(resource);
+            }
         }
     }
+    // TODO: check if building produces two or one unit at the same time
     // include new entity in state
-    blueprint->newInstance(s);
+    int id = blueprint->newInstance(s);
+    if(prodUnitsInBuilding){
+        produced.push_back(id);
+
+    }
     return;
 }

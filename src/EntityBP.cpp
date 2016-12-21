@@ -54,13 +54,19 @@ UnitBP::UnitBP(std::string data[15]) :
     isWorker(std::stoi(data[12])==1) {
 }
 int UnitBP::getSupplyCost() { return supplyCost; }
-void UnitBP::newInstance(State &state) const {
+int UnitBP::newInstance(State &state) const {
+    int id;
 
     if (isWorker) {
-        state.addWorkerInst(WorkerInst(this));
+        auto newWorker = WorkerInst(this);
+        id = newWorker.getID();
+        state.addWorkerInst(newWorker);
     } else {
-        state.addUnitInst(UnitInst(this));
+        auto newUnit = UnitInst(this);
+        id = newUnit.getID();
+        state.addUnitInst(newUnit);
     }
+    return id;
 }
 
 
@@ -68,10 +74,16 @@ BuildingBP::BuildingBP(std::string data[15]) :
     EntityBP(data),
     startResources(std::stoi(data[13]), std::stoi(data[14])) {
 }
-void BuildingBP::newInstance(State &state) const {
+int BuildingBP::newInstance(State &state) const {
+    int id;
     if (startResources.getGas() || startResources.getMinerals()) {
-        state.addResourceInst(ResourceInst(this));
+        auto newResource = ResourceInst(this);
+        id = newResource.getID();
+        state.addResourceInst(newResource);
     } else {
-        state.addBuildingInst(BuildingInst(this));
+        auto newBuilding = BuildingInst(this);
+        id = newBuilding.getID();
+        state.addBuildingInst(newBuilding);
     }
+    return id;
 }

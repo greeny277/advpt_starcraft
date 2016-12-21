@@ -17,6 +17,8 @@ class EntityInst {
         static int next_id;
     public:
         virtual bool isBusy() const;
+        bool isMorphing() const;
+        void setMorphing(bool b);
         EntityInst(const EntityBP *bp);
         const EntityBP *getBlueprint() const;
         const int getID() const;
