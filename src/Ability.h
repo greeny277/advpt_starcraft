@@ -10,11 +10,11 @@ class Ability {
         inline Ability(int energyCosts_) :
             energyCosts(energyCosts_) {
         }
-        virtual void create(int, State&, EntityInst *triggeredBy) const = 0;
+        virtual void create(int, State&, int triggeredBy) const = 0;
 };
 
 class MuleAbility : public Ability {
     public:
         MuleAbility();
-        void create(int startPoint, State &s, EntityInst *triggeredBy) const;
+        void create(int startPoint, State &s, int triggeredBy) const;
 };

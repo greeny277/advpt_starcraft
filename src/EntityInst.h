@@ -62,12 +62,12 @@ class ResourceInst : public BuildingInst {
 };
 class WorkerInst : public UnitInst {
     private:
-        ResourceInst *workingResource;
+        int workingResource;
         bool isBuilding;
 
     public:
         WorkerInst(const UnitBP *unit);
-        void assignToResource(ResourceInst *r);
+        void assignToResource(ResourceInst& r);
         BuildEntityAction *startBuilding(BuildingBP *bbp, int curTime);
         void stopBuilding();
         bool isBusy() const;

@@ -6,8 +6,8 @@
 MuleAbility::MuleAbility() : Ability(50) {
 }
 
-void MuleAbility::create(int startPoint, State &s, EntityInst *triggeredBy) const {
-    WorkerInst *mule = new MuleInst(static_cast<const UnitBP*>(s.blueprints.at("mule")));
-    s.addEntityInst(mule);
-    s.runningActions.push_back(new MuleAction(startPoint, triggeredBy, mule));
+void MuleAbility::create(int startPoint, State &s, int triggeredBy) const {
+    WorkerInst mule = MuleInst(static_cast<const UnitBP*>(s.blueprints.at("mule")));
+    s.addWorkerInst(mule);
+    s.muleActions.push_back(MuleAction(startPoint, triggeredBy, mule.getID()));
 }

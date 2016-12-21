@@ -1,9 +1,9 @@
 // vim: ts=4:sw=4 expandtab
+#include "State.h"
 #include "EntityBP.h"
 #include "Ability.h"
 #include "EntityInst.h"
 #include <sstream>
-
 static std::vector<std::string> parseRequirements(const std::string &requirements) {
     std::vector<std::string> requireOneOf;
     std::stringstream requirementStream(requirements);
@@ -54,11 +54,12 @@ UnitBP::UnitBP(std::string data[15]) :
     isWorker(std::stoi(data[12])==1) {
 }
 int UnitBP::getSupplyCost() { return supplyCost; }
-EntityInst *UnitBP::newInstance() const {
+void UnitBP::newInstance(State &state) const {
+
     if (isWorker) {
-        return new WorkerInst(this);
+        state.addWorkerInst(WorkerInst(this));
     } else {
-        return new UnitInst(this);
+        state.addUnitInst(UnitInst(this));
     }
 }
 
@@ -67,10 +68,10 @@ BuildingBP::BuildingBP(std::string data[15]) :
     EntityBP(data),
     startResources(std::stoi(data[13]), std::stoi(data[14])) {
 }
-EntityInst *BuildingBP::newInstance() const {
+void BuildingBP::newInstance(State &state) const {
     if (startResources.getGas() || startResources.getMinerals()) {
-        return new ResourceInst(this);
+        state.addResourceInst(ResourceInst(this));
     } else {
-        return new BuildingInst(this);
+        state.addBuildingInst(BuildingInst(this));
     }
 }

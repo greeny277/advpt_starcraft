@@ -83,7 +83,7 @@ BuildEntityAction *BuildingInst::produceUnit(UnitBP *entity, State &s){
 
     freeBuildSlots--;
 
-    return new BuildEntityAction(s.time, entity, nullptr, this);
+    return new BuildEntityAction(s.time, entity, -1, getID());
 }
 
 void BuildingInst::incFreeBuildSlots(){
@@ -146,20 +146,20 @@ bool ResourceInst::isMinerals() const { return miningRate.getMinerals() > 0; }
 
 WorkerInst::WorkerInst(const UnitBP *unit) :
     UnitInst(unit),
-    workingResource(nullptr),
+    workingResource(-1),
     isBuilding(false) {
     }
-void WorkerInst::assignToResource(ResourceInst *r){
-    workingResource = r;
+void WorkerInst::assignToResource(ResourceInst& r){
+    workingResource = r.getID();
 }
 BuildEntityAction *WorkerInst::startBuilding(BuildingBP *bbp, int curTime) {
-    workingResource = nullptr;
+    workingResource = -1;
     isBuilding = true;
-    return new BuildEntityAction(curTime, bbp, this, nullptr);
+    return new BuildEntityAction(curTime, bbp, getID(), -1);
 }
 
 void WorkerInst::stopBuilding() {
     isBuilding = false;
     return;
 }
-bool WorkerInst::isBusy() const { return isBuilding || workingResource != nullptr; }
+bool WorkerInst::isBusy() const { return isBuilding || workingResource != -1; }

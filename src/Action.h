@@ -27,12 +27,12 @@ class Action {
 class AbilityAction : public Action {
     private:
         const char *const name;
-        const EntityInst *const triggeredBy;
-        const BuildingInst *targetBuilding; // optional
+        const int triggeredBy;
+        const int targetBuilding; // optional
     protected:
         AbilityAction(const char *name_,
-            const EntityInst *triggeredBy_,
-            const BuildingInst *targetBuilding_,
+            const int triggeredBy_,
+            const int targetBuilding_,
             int startPoint_,
             int timeToFinish_);
 
@@ -42,22 +42,22 @@ class AbilityAction : public Action {
 };
 class MuleAction : public AbilityAction {
     private:
-        WorkerInst *worker;
+        int worker;
 
     public:
-        MuleAction(int startPoint_, EntityInst *triggeredBy_, WorkerInst *worker);
+        MuleAction(int startPoint_, int triggeredBy_, int worker);
         void finish(State &s);
 };
 
 class BuildEntityAction : public Action {
     private:
         EntityBP* blueprint;
-        WorkerInst* worker;
-        std::vector<EntityInst *> produced;
-        EntityInst* producedBy;
+        int worker;
+        std::vector<int> produced;
+        int producedBy;
 
     public:
-        BuildEntityAction(int startPoint_, EntityBP *blueprint_ , WorkerInst *worker_, EntityInst *);
+        BuildEntityAction(int startPoint_, EntityBP *blueprint_ , int worker_, int producedBy);
         nlohmann::json printStartJSON();
         nlohmann::json printEndJSON();
         void finish(State &s);

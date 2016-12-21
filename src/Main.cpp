@@ -60,13 +60,32 @@ std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP*>
     return bps;
 }
 void resourceUpdate(State &state) {
-    for (EntityInst *ent : state.getEntities()) {
-        ResourceInst* res = dynamic_cast<ResourceInst*>(ent);
+    state.iterEntities([&](EntityInst& ent) {
+        ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
         if (res != nullptr) {
             state.resources += res->mine();
         }
-        ent->restoreEnergy();
+        ent.restoreEnergy();
+    });
+}
+
+template<typename T>
+static void actionsToJSON(std::vector<T>& actions, nlohmann::json& events, int timestamp) {
+    for(auto action = actions.begin(); action != actions.end(); ){
+        nlohmann::json m;
+        if (action->isReady()) {
+            m = action->printEndJSON();
+            action = actions.erase(action);
+        } else if (action->getStartPoint() == timestamp) {
+            m = action->printStartJSON();
+            action++;
+        }
+
+        if (!m.empty()) {
+            events.push_back(m);
+        }
     }
+
 }
 
 static nlohmann::json printJSON(State &curState, int timestamp) {
@@ -79,34 +98,20 @@ static nlohmann::json printJSON(State &curState, int timestamp) {
 
     int mineralWorkers = 0;
     int gasWorkers = 0;
-    for (const auto & entity : curState.getEntities()) {
-        auto res = dynamic_cast<const ResourceInst*>(entity);
+    curState.iterEntities([&](EntityInst& entity) {
+        auto res = dynamic_cast<const ResourceInst*>(&entity);
         if (res != nullptr) {
             if (res->isMinerals())
                 mineralWorkers += res->getActiveWorkerCount();
             if (res->isGas())
                 gasWorkers += res->getActiveWorkerCount();
         }
-    }
+    });
     message["status"]["workers"]["minerals"] = mineralWorkers;
     message["status"]["workers"]["vespene"] = gasWorkers;
-
-    auto action = std::begin(curState.runningActions);
     auto events = nlohmann::json::array();
-    while (action != std::end(curState.runningActions)) {
-        nlohmann::json m;
-        if ((*action)->isReady()) {
-            m = (*action)->printEndJSON();
-            action = curState.runningActions.erase(action);
-        } else if ((*action)->getStartPoint() == timestamp) {
-            m = (*action)->printStartJSON();
-            action++;
-        }
-
-        if (!m.empty()) {
-            events.push_back(m);
-        }
-    }
+    actionsToJSON(curState.buildActions, events, timestamp);
+    actionsToJSON(curState.buildActions, events, timestamp);
     message["events"] = events;
     return message;
 }
@@ -134,28 +139,29 @@ static nlohmann::json getInitialJSON(const std::unordered_map<std::string, Entit
     }
     return j;
 }
-
-static void checkActions(State &s){
-    for(Action *action : s.runningActions){
-        action->tick();
-        if(action->isReady()){
-            action->finish(s);
+template<typename T>
+static void checkActions(std::vector<T>& actions, State& s){
+    for(Action& action : actions){
+        action.tick();
+        if(action.isReady()){
+            action.finish(s);
         }
     }
     return;
 }
 
 static bool checkAndRunAbilities(int currentTime, State &s) {
-    for (EntityInst *e : s.getEntities()) {
-        for (const Ability *ab : e->getBlueprint()->getAbilities()) {
-            if (e->getCurrentEnergy() >= ab->energyCosts) {
-                ab->create(currentTime, s, e );
-                e->removeEnergy(ab->energyCosts);
-                return true;
+    bool result = false;
+    s.iterEntities([&](EntityInst& e) {
+        for (const Ability *ab : e.getBlueprint()->getAbilities()) {
+            if (e.getCurrentEnergy() >= ab->energyCosts) {
+                ab->create(currentTime, s, e.getID());
+                e.removeEnergy(ab->energyCosts);
+                result = true;
             }
         }
-    }
-    return false;
+    });
+    return result;
 }
 static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string race) {
     std::vector<std::string> dependencies;
@@ -198,17 +204,12 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
 }
 
 static void redistributeWorkers(State &s) {
-    for(EntityInst *entity : s.getEntities()) {
-        auto worker = dynamic_cast<WorkerInst*>(entity);
-        if(worker != nullptr && !worker->isBusy()) {
+    for(auto& worker : s.getWorkers()) {
+        if(!worker.second.isBusy()) {
             // assign to new resource instance
-            for(EntityInst *entity: s.getEntities()) {
-                auto resource = dynamic_cast<ResourceInst*>(entity);
-                if(resource != nullptr && resource->isGas() && resource->getActiveWorkerCount() < 3) {
-                    worker->assignToResource(resource);
-                    break;
-                } else if(resource != nullptr && resource->isMinerals()){
-                    worker->assignToResource(resource);
+            for(auto& resource: s.getResources()) {
+                if((resource.second.isGas() && resource.second.getActiveWorkerCount() < 3) || resource.second.isMinerals()) {
+                    worker.second.assignToResource(resource.second);
                     break;
                 }
             }
@@ -251,8 +252,11 @@ int main(int argc, char *argv[]) {
                 int currentTime = states.size();
                 resourceUpdate(curState);
 
-                checkActions(curState); // TODO Christian
+                checkActions(curState.muleActions, curState);
+                checkActions(curState.buildActions, curState);
+
                 checkAndRunAbilities(currentTime, curState);
+
                 redistributeWorkers(curState);
 
                 messages.push_back(printJSON(curState, currentTime));
