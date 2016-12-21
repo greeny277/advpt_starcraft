@@ -168,7 +168,6 @@ static bool buildOrderCheckOneOf(std::vector<std::string> oneOf, std::vector<std
 
         if(!oneOf.empty()) {
             for(auto req: oneOf) {
-                std::cout << req<< std::endl;
                 if ( std::find(dependencies.begin(), dependencies.end(), req) != dependencies.end() ) {
                     return true;
                 }
@@ -212,11 +211,11 @@ static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string 
         if(!valid){return false;}
         
         auto morphedFrom = bp->getMorphedFrom();
-        if(!morphedFrom.empty()) {
+        if(morphedFrom.begin()->compare("") != 0) {
             for(std::string req : morphedFrom) {
                 auto position =  std::find(dependencies.begin(), dependencies.end(), req);
                 if (position == dependencies.end()) {
-                    std::cerr << "entity cannot be upgraded, not exist yet: " << bp->getName() << std::endl;
+                    std::cerr << "entity:" << bp->getName() << " cannot be upgraded, not exist yet: " << req << std::endl;
                     return false;
                 } else {
                     dependencies.erase(position);
