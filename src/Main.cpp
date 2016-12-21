@@ -61,12 +61,12 @@ std::vector<EntityBP*> readBuildOrder(std::unordered_map<std::string, EntityBP*>
 }
 void resourceUpdate(State &state) {
     state.iterEntities([&](EntityInst& ent) {
-        ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
-        if (res != nullptr) {
+            ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
+            if (res != nullptr) {
             state.resources += res->mine();
-        }
-        ent.restoreEnergy();
-    });
+            }
+            ent.restoreEnergy();
+            });
 }
 
 template<typename T>
@@ -99,14 +99,14 @@ static nlohmann::json printJSON(State &curState, int timestamp) {
     int mineralWorkers = 0;
     int gasWorkers = 0;
     curState.iterEntities([&](EntityInst& entity) {
-        auto res = dynamic_cast<const ResourceInst*>(&entity);
-        if (res != nullptr) {
+            auto res = dynamic_cast<const ResourceInst*>(&entity);
+            if (res != nullptr) {
             if (res->isMinerals())
-                mineralWorkers += res->getActiveWorkerCount();
+            mineralWorkers += res->getActiveWorkerCount();
             if (res->isGas())
-                gasWorkers += res->getActiveWorkerCount();
-        }
-    });
+            gasWorkers += res->getActiveWorkerCount();
+            }
+            });
     message["status"]["workers"]["minerals"] = mineralWorkers;
     message["status"]["workers"]["vespene"] = gasWorkers;
     auto events = nlohmann::json::array();
@@ -153,54 +153,70 @@ static void checkActions(std::vector<T>& actions, State& s){
 static bool checkAndRunAbilities(int currentTime, State &s) {
     bool result = false;
     s.iterEntities([&](EntityInst& e) {
-        for (const Ability *ab : e.getBlueprint()->getAbilities()) {
+            for (const Ability *ab : e.getBlueprint()->getAbilities()) {
             if (e.getCurrentEnergy() >= ab->energyCosts) {
-                ab->create(currentTime, s, e.getID());
-                e.removeEnergy(ab->energyCosts);
-                result = true;
+            ab->create(currentTime, s, e.getID());
+            e.removeEnergy(ab->energyCosts);
+            result = true;
             }
-        }
-    });
+            }
+            });
     return result;
 }
-static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string race) {
+
+static bool buildOrderCheckOneOf(std::vector<std::string> oneOf, std::vector<std::string> dependencies) {
+
+        if(!oneOf.empty()) {
+            for(auto req: oneOf) {
+                std::cout << req<< std::endl;
+                if ( std::find(dependencies.begin(), dependencies.end(), req) != dependencies.end() ) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+
+}
+
+static bool validateBuildOrder(std::vector<EntityBP*> initialUnits, std::string race,std::unordered_map<std::string, EntityBP*> blueprints ) {
+    State s(race, blueprints);
     std::vector<std::string> dependencies;
+    for(auto unit: s.getUnits()) {
+        dependencies.push_back(unit.second.getBlueprint()->getName());
+    }
+    for(auto worker: s.getWorkers()) {
+        dependencies.push_back(worker.second.getBlueprint()->getName());
+    }
+    for(auto building: s.getBuildings()) {
+        dependencies.push_back(building.second.getBlueprint()->getName());
+    }
+    for(auto resource: s.getResources()) {
+        dependencies.push_back(resource.second.getBlueprint()->getName());
+    }
+
+    // TODO requirement vespin units can only be build of vespinInst exists
     for(auto bp : initialUnits) {
         if(bp->getRace() != race) {
-            // entity to be build does not belong to the the same race as the the first declared
+            std::cerr << "entities to be build do not belong to one race" << std::endl;
             return false;
         }
         // check if the building has alle the required dependencies
         auto requireOneOf = bp->getRequireOneOf();
-        if(!requireOneOf.empty()) {
-            for(std::string req : requireOneOf) {
-                if ( std::find(dependencies.begin(), dependencies.end(), req) != dependencies.end() ) {
-                    break;
-                } else if(req.compare(requireOneOf.back()) == 0) {
-                    //required entity was not listed before this entity
-                    return false;
-                } else {
-                    continue;
-                }
-            }
-        }
+        bool valid = buildOrderCheckOneOf(requireOneOf, dependencies);
+        if(!valid){return false;}
+        
         // check if the required building for the to be produced unit exists
         auto producedByOneOf = bp->getProducedByOneOf();
-        if(!producedByOneOf.empty()) {
-            for(std::string req : producedByOneOf) {
-                if ( std::find(dependencies.begin(), dependencies.end(), req) == dependencies.end() ) {
-                    //required entity was not listed before this entity
-                    return false;
-                }
-            }
-        }
-
+        valid = buildOrderCheckOneOf(producedByOneOf, dependencies);
+        if(!valid){return false;}
+        
         auto morphedFrom = bp->getMorphedFrom();
         if(!morphedFrom.empty()) {
             for(std::string req : morphedFrom) {
                 auto position =  std::find(dependencies.begin(), dependencies.end(), req);
                 if (position == dependencies.end()) {
-                    //required entity was not listed before this entity
+                    std::cerr << "entity cannot be upgraded, not exist yet: " << bp->getName() << std::endl;
                     return false;
                 } else {
                     dependencies.erase(position);
@@ -236,8 +252,7 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
         std::string race(initialUnits.front()->getRace());
-
-        bool valid = validateBuildOrder(initialUnits, race);
+        bool valid = validateBuildOrder(initialUnits, race, blueprints);
         nlohmann::json j = getInitialJSON(blueprints, initialUnits, race, valid);
 
         std::queue<EntityBP*, std::vector<EntityBP*>> buildOrder(initialUnits);
@@ -245,7 +260,6 @@ int main(int argc, char *argv[]) {
 
         if (valid) {
             std::vector<State> states;
-
             auto messages = nlohmann::json::array();
             j["messages"] = messages;
 
