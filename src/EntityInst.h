@@ -74,7 +74,7 @@ class WorkerInst : public UnitInst {
     public:
         WorkerInst(const UnitBP *unit);
         void assignToResource(ResourceInst& r);
-        BuildEntityAction *startBuilding(BuildingBP *bbp, int curTime, State&);
+        bool startBuilding(BuildingBP *bbp, State&);
         void stopBuilding();
         bool isBusy() const;
         bool isMiningMinerals(State&) const;

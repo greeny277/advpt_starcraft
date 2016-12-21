@@ -69,7 +69,7 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
         return false;
     // TODO: if this is a building that can do more than one thing, check that we are really doing nothing right now
 
-    s.buildActions.push_back(BuildEntityAction(s.time, entity, -1, getID(), s));
+    s.buildActions.push_back(BuildEntityAction(entity, -1, getID(), s));
     return true;
 }
 
@@ -112,7 +112,7 @@ bool BuildingInst::produceUnit(UnitBP *entity, State &s) {
 
     freeBuildSlots--;
 
-    s.buildActions.push_back(BuildEntityAction(s.time, entity, -1, getID(), s));
+    s.buildActions.push_back(BuildEntityAction(entity, -1, getID(), s));
     return true;
 }
 
@@ -183,11 +183,18 @@ WorkerInst::WorkerInst(const UnitBP *unit) :
 void WorkerInst::assignToResource(ResourceInst& r){
     workingResource = r.getID();
 }
-BuildEntityAction *WorkerInst::startBuilding(BuildingBP *bbp, int curTime, State &s) {
+bool WorkerInst::startBuilding(BuildingBP *bbp, State &s) {
+    if (isMorphing()) {
+        return false;
+    }
+
     workingResource = -1;
+    if (!checkBuildRequirements(bbp, s) || !bbp->getMorphedFrom().empty()) {
+        return false;
+    }
     isBuilding = true;
-    // TODO: check requirements
-    return new BuildEntityAction(curTime, bbp, getID(), -1, s);
+    s.buildActions.push_back(BuildEntityAction(bbp, getID(), -1, s));
+    return true;
 }
 
 void WorkerInst::stopBuilding() {

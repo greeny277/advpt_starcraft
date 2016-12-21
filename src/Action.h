@@ -57,7 +57,7 @@ class BuildEntityAction : public Action {
         int producedBy;
 
     public:
-        BuildEntityAction(int startPoint_, EntityBP *blueprint_ , int worker_, int producedBy, State &s);
+        BuildEntityAction(EntityBP *blueprint_ , int worker_, int producedBy, State &s);
         nlohmann::json printStartJSON();
         nlohmann::json printEndJSON();
         void finish(State &s);

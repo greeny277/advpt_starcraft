@@ -53,9 +53,9 @@ void MuleAction::finish(State &s) {
     workers.erase(workers.find(worker));
 }
 
-BuildEntityAction::BuildEntityAction(int startPoint_, EntityBP *blueprint_ , int worker_,
+BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
         int producedBy_, State &s) :
-    Action(startPoint_,blueprint_->getBuildTime()),
+    Action(s.timestamp,blueprint_->getBuildTime()),
     blueprint(blueprint_),
     worker(worker_),
     producedBy(producedBy_),

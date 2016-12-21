@@ -229,19 +229,7 @@ static bool validateBuildOrder(const std::vector<EntityBP*> &initialUnits, const
     return true;
 }
 
-static bool tryBuild(WorkerInst &worker, EntityBP *entity, State &s) {
-    if (entity->getMorphedFrom().empty()) {
-        // TODO: tell the worker to build a completely new building
-    } else if (dynamic_cast<BuildingBP*>(entity) != nullptr) {
-        // TODO: find a non-busy entity to upgrade
-        //auto buildAction = worker.produceBuilding(buildOrder.front(), s);
-    } else {
-        // TODO: find a building with free slots
-        //auto buildAction = worker.produceUnit(buildOrder.front(), s);
-    }
-    return false;
-}
-static void redistributeWorkers(State &s, std::queue<EntityBP*, std::vector<EntityBP*>> &buildOrder, bool doBuild) {
+static void redistributeWorkers(State &s, BuildingBP *bpToBuild) {
     std::vector<WorkerInst *> idleWorkers;
     std::vector<WorkerInst *> mineralWorkers;
     std::vector<WorkerInst *> gasWorkers;
@@ -255,13 +243,12 @@ static void redistributeWorkers(State &s, std::queue<EntityBP*, std::vector<Enti
         }
     }
 
-    if (doBuild) {
+    if (bpToBuild != nullptr) {
         // find the "best" worker to build something, and try to do so
         std::array<std::vector<WorkerInst *>*, 3> workerLists{&idleWorkers, &mineralWorkers, &gasWorkers};
         for (auto workers : workerLists) {
             if (!workers->empty()) {
-                // TODO: cancel any mining
-                if (tryBuild(*workers->back(), buildOrder.front(), s)) {
+                if (workers->back()->startBuilding(bpToBuild, s)) {
                     workers->pop_back();
                 }
                 break;
@@ -347,8 +334,25 @@ int main(int argc, char *argv[]) {
                 checkActions(curState.muleActions, curState);
                 bool canBuild = checkAndRunAbilities(currentTime, curState);
 
+                // timestep 3.5: maybe build something
+                BuildingBP *workerTask = nullptr;
+                if (canBuild) {
+                    auto buildNext = buildOrder.front();
+                    auto unit = dynamic_cast<UnitBP*>(buildNext);
+                    if (buildNext->getMorphedFrom().size()) {
+                        // TODO: find a non-busy entity to upgrade
+                    } else if(unit != nullptr) {
+                        // TODO: find a building with free slots
+                        //auto buildAction = worker.produceUnit(buildOrder.front(), s);
+                    } else {
+                        auto building = dynamic_cast<BuildingBP*>(buildNext);
+                        assert(building != nullptr);
+                        workerTask = building;
+                    }
+                }
+
                 // timestep 4
-                redistributeWorkers(curState, buildOrder, canBuild);
+                redistributeWorkers(curState, workerTask);
 
                 // timestep 5
                 messages.push_back(printJSON(curState, currentTime));
