@@ -126,17 +126,9 @@ void BuildingInst::incFreeBuildSlots(){
 ResourceInst::ResourceInst(const BuildingBP *building) :
     BuildingInst(building),
     remaining(building->startResources),
-    miningRate(0, 0),
-    maxWorkerSlots(0),
+    miningRate(building->startResources.getGas() > 0 ? Resources(35, 0, 100) : Resources(0, 7, 10)),
+    maxWorkerSlots(building->startResources.getGas() > 0 ? 3 : 16),
     activeWorkerSlots(0) {
-        if (building->startResources.getGas() > 0) {
-            maxWorkerSlots = 3;
-            miningRate.setMilliGas(350);
-        } else {
-            // TODO: fix remaining minerals for upgraded buildings
-            maxWorkerSlots = 16;
-            miningRate.setMilliMinerals(700);
-        }
 }
 
 Resources ResourceInst::mine() {
@@ -177,6 +169,10 @@ int ResourceInst::getFreeWorkerCount() const { return maxWorkerSlots - activeWor
 bool ResourceInst::isGas() const { return miningRate.getGas() > 0; }
 
 bool ResourceInst::isMinerals() const { return miningRate.getMinerals() > 0; }
+void ResourceInst::copyRemaingResources(ResourceInst &other) {
+    remaining = other.remaining;
+    activeWorkerSlots = other.activeWorkerSlots;
+}
 
 WorkerInst::WorkerInst(const UnitBP *unit) :
     UnitInst(unit),

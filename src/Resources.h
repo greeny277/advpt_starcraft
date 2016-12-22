@@ -19,14 +19,8 @@ class Resources{
         inline void setMinerals(int val) {
             milliMinerals = val * 1000;
         }
-        inline void setMilliGas(int val) {
-            milliGas = val;
-        }
-        inline void setMilliMinerals(int val) {
-            milliMinerals = val;
-        }
 
-        Resources(int gas, int minerals);
+        Resources(int gas, int minerals, int divisor=1);
 
         void operator+=(Resources other);
         void operator-=(Resources other);

@@ -96,7 +96,9 @@ nlohmann::json BuildEntityAction::printEndJSON() {
 }
 
 void BuildEntityAction::finish(State &s) {
-    bool prodUnitsInBuilding = false;
+    int id = blueprint->newInstance(s);
+    produced.push_back(id); // remember ID for JSON output
+
     // stop worker to build
     if(worker != -1){
         s.getWorkers().at(worker).stopBuilding();
@@ -106,11 +108,6 @@ void BuildEntityAction::finish(State &s) {
             auto building = s.getBuildings().find(producedBy);
             // increase freeBuildSlots
             building->second.incFreeBuildSlots();
-            // Does the building produce units
-            auto unit = dynamic_cast<const UnitBP*>(building->second.getBlueprint());
-            if(unit != nullptr){
-                prodUnitsInBuilding = true;
-            }
             // Check if building is morphing
             if(building->second.isMorphing()){
                 s.getBuildings().erase(building);
@@ -135,22 +132,16 @@ void BuildEntityAction::finish(State &s) {
             auto resource = s.getResources().find(producedBy);
             if(resource == s.getResources().end()){
                 std::cerr << "BuildEntityAction::finish(): Bad error. Couldn't find any instance in state to given Producer-ID" << std::endl;
+                return;
             }
-            auto unit = dynamic_cast<const UnitBP*>(resource->second.getBlueprint());
-            if(unit != nullptr){
-                prodUnitsInBuilding = true;
-            }
+
+            s.getResources().at(id).copyRemaingResources(resource->second);
+
             if(resource->second.isMorphing()){
                 s.getResources().erase(resource);
             }
         }
     }
     // TODO: check if building produces two or one unit at the same time
-    // include new entity in state
-    int id = blueprint->newInstance(s);
-    if(prodUnitsInBuilding){
-        produced.push_back(id);
-
-    }
     return;
 }

@@ -1,9 +1,9 @@
 // vim: ts=4:sw=4 expandtab
 #include "Resources.h"
 
-Resources::Resources(int gas, int minerals) :
-    milliGas(gas * 1000),
-    milliMinerals(minerals * 1000) {
+Resources::Resources(int gas, int minerals, int divisor) :
+    milliGas(gas * (1000 / divisor)),
+    milliMinerals(minerals * (1000 / divisor)) {
 }
 
 void Resources::operator+=(Resources other) {

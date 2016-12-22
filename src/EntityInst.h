@@ -22,7 +22,7 @@ class EntityInst {
         bool isMorphing() const;
         void setMorphing(bool b);
         bool startMorphing(EntityBP *, State &s);
-        EntityInst(const EntityBP *bp);
+        explicit EntityInst(const EntityBP *bp);
         const EntityBP *getBlueprint() const;
         int getID() const;
         inline int getCurrentEnergy() const { return currentMicroEnergy / 1000000; }
@@ -33,7 +33,7 @@ class EntityInst {
 class UnitInst : public EntityInst {
     public:
          bool isBusy() const override;
-         UnitInst(const UnitBP *unit);
+         explicit UnitInst(const UnitBP *unit);
 };
 
 class BuildingInst : public EntityInst {
@@ -41,7 +41,7 @@ class BuildingInst : public EntityInst {
         int freeBuildSlots;
         bool chronoBoostActivated;
     public:
-         BuildingInst(const BuildingBP *building);
+         explicit BuildingInst(const BuildingBP *building);
          bool isBusy() const override;
          bool produceUnit(UnitBP *entity, State &s);
          void incFreeBuildSlots();
@@ -51,11 +51,11 @@ class BuildingInst : public EntityInst {
 class ResourceInst : public BuildingInst {
     private:
         Resources remaining;
-        Resources miningRate;
-        int maxWorkerSlots;
+        const Resources miningRate;
+        const int maxWorkerSlots;
         int activeWorkerSlots;
     public:
-        ResourceInst(const BuildingBP *building);
+        explicit ResourceInst(const BuildingBP *building);
         Resources mine();
         Resources getRemainingResources() const;
         /** Add/remove worker from resource and return true if
@@ -67,6 +67,7 @@ class ResourceInst : public BuildingInst {
         int getFreeWorkerCount() const;
         bool isGas() const;
         bool isMinerals() const;
+        void copyRemaingResources(ResourceInst &other);
 };
 class WorkerInst : public UnitInst {
     private:
@@ -74,7 +75,7 @@ class WorkerInst : public UnitInst {
         bool isBuilding;
 
     public:
-        WorkerInst(const UnitBP *unit);
+        explicit WorkerInst(const UnitBP *unit);
         void assignToResource(ResourceInst& r);
         bool startBuilding(BuildingBP *bbp, State&);
         void stopBuilding();
@@ -85,5 +86,5 @@ class WorkerInst : public UnitInst {
 
 class MuleInst : public WorkerInst {
     public:
-        inline MuleInst(const UnitBP *unit) : WorkerInst(unit) {}
+        explicit inline MuleInst(const UnitBP *unit) : WorkerInst(unit) {}
 };

@@ -7,7 +7,7 @@ class State;
 class Ability {
     public:
         const int energyCosts;
-        inline Ability(int energyCosts_) :
+        inline explicit Ability(int energyCosts_) :
             energyCosts(energyCosts_) {
         }
         virtual void create(int, State&, int triggeredBy) const = 0;
