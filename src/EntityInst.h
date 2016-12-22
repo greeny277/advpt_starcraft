@@ -28,6 +28,7 @@ class EntityInst {
         inline int getCurrentEnergy() const { return currentMicroEnergy / 1000000; }
         inline void removeEnergy(int howMuch) { currentMicroEnergy -= howMuch * 1000000; }
         inline void restoreEnergy() { currentMicroEnergy = std::max(blueprint->getMaxEnergy() * 1000000, currentMicroEnergy + 562500); }
+        virtual bool canMorph() const;
 };
 class UnitInst : public EntityInst {
     public:
@@ -41,9 +42,10 @@ class BuildingInst : public EntityInst {
         bool chronoBoostActivated;
     public:
          BuildingInst(const BuildingBP *building);
-         bool isBusy() const;
+         bool isBusy() const override;
          bool produceUnit(UnitBP *entity, State &s);
          void incFreeBuildSlots();
+         bool canMorph() const override;
 };
 
 class ResourceInst : public BuildingInst {
@@ -76,7 +78,7 @@ class WorkerInst : public UnitInst {
         void assignToResource(ResourceInst& r);
         bool startBuilding(BuildingBP *bbp, State&);
         void stopBuilding();
-        bool isBusy() const;
+        bool isBusy() const override;
         bool isMiningMinerals(State&) const;
         bool isMiningGas(State&) const;
 };

@@ -51,14 +51,16 @@ class UnitBP : public EntityBP {
     public:
         UnitBP(std::string data[15]);
         int getSupplyCost();
-        int newInstance(State&) const;
+        int newInstance(State&) const override;
 };
 
 class BuildingBP : public EntityBP {
-    //TODO: Add maxBuildSlots
+    private:
+        const int buildSlots;
     public:
         const Resources startResources;
         BuildingBP(std::string data[15]);
-        int newInstance(State&) const;
+        int newInstance(State&) const override;
+        int getBuildSlots() const;
 
 };

@@ -16,5 +16,5 @@ class Ability {
 class MuleAbility : public Ability {
     public:
         MuleAbility();
-        void create(int startPoint, State &s, int triggeredBy) const;
+        void create(int startPoint, State &s, int triggeredBy) const override;
 };

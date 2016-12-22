@@ -72,6 +72,7 @@ int UnitBP::newInstance(State &state) const {
 
 BuildingBP::BuildingBP(std::string data[15]) :
     EntityBP(data),
+    buildSlots(name.rfind("_with_reactor") == std::string::npos ? 1 : 2),
     startResources(std::stoi(data[13]), std::stoi(data[14])) {
 }
 int BuildingBP::newInstance(State &state) const {
@@ -87,3 +88,4 @@ int BuildingBP::newInstance(State &state) const {
     }
     return id;
 }
+int BuildingBP::getBuildSlots() const { return buildSlots; }

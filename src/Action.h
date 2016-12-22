@@ -37,8 +37,8 @@ class AbilityAction : public Action {
             int timeToFinish_);
 
     public:
-        nlohmann::json printStartJSON();
-        nlohmann::json printEndJSON();
+        nlohmann::json printStartJSON() override;
+        nlohmann::json printEndJSON() override;
 };
 class MuleAction : public AbilityAction {
     private:
@@ -46,7 +46,7 @@ class MuleAction : public AbilityAction {
 
     public:
         MuleAction(int startPoint_, int triggeredBy_, int worker);
-        void finish(State &s);
+        void finish(State &s) override;
 };
 
 class BuildEntityAction : public Action {
@@ -58,8 +58,8 @@ class BuildEntityAction : public Action {
 
     public:
         BuildEntityAction(EntityBP *blueprint_ , int worker_, int producedBy, State &s);
-        nlohmann::json printStartJSON();
-        nlohmann::json printEndJSON();
-        void finish(State &s);
+        nlohmann::json printStartJSON() override;
+        nlohmann::json printEndJSON() override;
+        void finish(State &s) override;
 };
 

@@ -57,7 +57,7 @@ void EntityInst::setMorphing(bool b){
     morphing =  b;
 }
 bool EntityInst::startMorphing(EntityBP *entity, State &s) {
-    if (!checkBuildRequirements(entity, s)) {
+    if (!checkBuildRequirements(entity, s) || !canMorph()) {
         return false;
     }
     bool foundBp = false;
@@ -67,7 +67,6 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
     }
     if (!foundBp)
         return false;
-    // TODO: if this is a building that can do more than one thing, check that we are really doing nothing right now
 
     s.buildActions.push_back(BuildEntityAction(entity, -1, getID(), s));
     return true;
@@ -79,6 +78,7 @@ EntityInst::EntityInst(const EntityBP *bp) :
 }
 
 const EntityBP* EntityInst::getBlueprint() const { return blueprint; }
+bool EntityInst::canMorph() const { return !isBusy(); }
 
 int EntityInst::getID() const { return id; }
 
@@ -90,12 +90,15 @@ UnitInst::UnitInst(const UnitBP *unit) :
 
 BuildingInst::BuildingInst(const BuildingBP *building) :
     EntityInst(building),
-    freeBuildSlots(1),
+    freeBuildSlots(building->getBuildSlots()),
     chronoBoostActivated(false) {
 }
 
 bool BuildingInst::isBusy() const {
     return freeBuildSlots == 0 || EntityInst::isBusy();
+}
+bool BuildingInst::canMorph() const {
+    return freeBuildSlots == static_cast<const BuildingBP*>(getBlueprint())->getBuildSlots() && EntityInst::canMorph();
 }
 
 /** This method starts the mechanism of producing an unit in the building. Therefore
