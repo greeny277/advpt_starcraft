@@ -24,14 +24,14 @@ class EntityInst {
         bool startMorphing(EntityBP *, State &s);
         EntityInst(const EntityBP *bp);
         const EntityBP *getBlueprint() const;
-        const int getID() const;
+        int getID() const;
         inline int getCurrentEnergy() const { return currentMicroEnergy / 1000000; }
         inline void removeEnergy(int howMuch) { currentMicroEnergy -= howMuch * 1000000; }
         inline void restoreEnergy() { currentMicroEnergy = std::max(blueprint->getMaxEnergy() * 1000000, currentMicroEnergy + 562500); }
 };
 class UnitInst : public EntityInst {
     public:
-         bool isBusy();
+         bool isBusy() const override;
          UnitInst(const UnitBP *unit);
 };
 

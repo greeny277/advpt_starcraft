@@ -20,11 +20,11 @@ AbilityAction::AbilityAction(const char *name_,
         const int targetBuilding_,
         int startPoint_,
         int timeToFinish_):
+    Action(startPoint_, timeToFinish_),
     name(name_),
     triggeredBy(triggeredBy_),
-    targetBuilding(targetBuilding_),
-    Action(startPoint_, timeToFinish_){
-    }
+    targetBuilding(targetBuilding_) {
+}
 
 int Action::getStartPoint() const{
     return startPoint;
@@ -58,8 +58,8 @@ BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
     Action(s.timestamp,blueprint_->getBuildTime()),
     blueprint(blueprint_),
     worker(worker_),
-    producedBy(producedBy_),
-    produced{} {
+    produced{},
+    producedBy(producedBy_) {
 
     // change state
     s.resources -= blueprint->getCosts();

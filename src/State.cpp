@@ -2,19 +2,19 @@
 #include "State.h"
 
 State::State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints_) :
+    workerMap{},
+    buildingMap{},
+    unitMap{},
+    resourceMap{},
     time(0),
     currentSupply(0),
     resources{0, 50},
     currentMaxSupply(0),
-    unitMap{},
-    workerMap{},
-    buildingMap{},
-    resourceMap{},
     timestamp(0),
-    blueprints(blueprints_),
-    alreadyProduced{},
+    muleActions{},
     buildActions{},
-    muleActions{} {
+    blueprints(blueprints_),
+    alreadyProduced{} {
 
         if(race == "protoss") {
             auto probe = static_cast<const UnitBP*>(blueprints.at("probe"));

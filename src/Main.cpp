@@ -245,7 +245,7 @@ static void redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 
     if (bpToBuild != nullptr) {
         // find the "best" worker to build something, and try to do so
-        std::array<std::vector<WorkerInst *>*, 3> workerLists{&idleWorkers, &mineralWorkers, &gasWorkers};
+        std::array<std::vector<WorkerInst *>*, 3> workerLists{{&idleWorkers, &mineralWorkers, &gasWorkers}};
         for (auto workers : workerLists) {
             if (!workers->empty()) {
                 if (workers->back()->startBuilding(bpToBuild, s)) {
@@ -270,7 +270,7 @@ static void redistributeWorkers(State &s, BuildingBP *bpToBuild) {
     size_t mineralWorkerCount = std::min(workerCount - gasWorkerCount, minerals.size() * 16);
 
     if (gasWorkers.size() < gasWorkerCount) {
-        std::array<std::vector<WorkerInst *>*, 2> workerLists{&idleWorkers, &mineralWorkers};
+        std::array<std::vector<WorkerInst *>*, 2> workerLists{{&idleWorkers, &mineralWorkers}};
         for (auto g : gas) {
             if (g->getFreeWorkerCount() == 0)
                 continue;
@@ -294,7 +294,7 @@ static void redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 
 int main(int argc, char *argv[]) {
     const std::unordered_map<std::string, EntityBP*> blueprints = readConfig();
-    for (size_t i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         auto initialUnits = readBuildOrder(blueprints, argv[i]);
         if(initialUnits.empty()){
             std::cerr << "The build order list contains unknown members" << std::endl;

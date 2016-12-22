@@ -80,9 +80,9 @@ EntityInst::EntityInst(const EntityBP *bp) :
 
 const EntityBP* EntityInst::getBlueprint() const { return blueprint; }
 
-const int EntityInst::getID() const { return id; }
+int EntityInst::getID() const { return id; }
 
-bool UnitInst::isBusy() { return false; }
+bool UnitInst::isBusy() const { return false; }
 
 UnitInst::UnitInst(const UnitBP *unit) :
     EntityInst(unit) {
