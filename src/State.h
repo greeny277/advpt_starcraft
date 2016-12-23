@@ -13,10 +13,10 @@
 
 class State {
 private:
-    std::map<int,WorkerInst> workerMap;
-    std::map<int,BuildingInst> buildingMap;
-    std::map<int,UnitInst> unitMap;
-    std::map<int,ResourceInst> resourceMap;
+    std::unordered_map<int,WorkerInst> workerMap;
+    std::unordered_map<int,BuildingInst> buildingMap;
+    std::unordered_map<int,UnitInst> unitMap;
+    std::unordered_map<int,ResourceInst> resourceMap;
 public:
     int time;
     int currentSupply;
@@ -30,14 +30,14 @@ public:
 public:
     State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints);
     nlohmann::json getUnitJSON();
-    std::map<int, WorkerInst>& getWorkers();
-    std::map<int, BuildingInst>& getBuildings();
-    std::map<int, UnitInst>& getUnits();
-    std::map<int, ResourceInst>& getResources();
-    const std::map<int, WorkerInst>& getWorkers() const;
-    const std::map<int, BuildingInst>& getBuildings() const;
-    const std::map<int, UnitInst>& getUnits() const;
-    const std::map<int, ResourceInst>& getResources() const;
+    std::unordered_map<int, WorkerInst>& getWorkers();
+    std::unordered_map<int, BuildingInst>& getBuildings();
+    std::unordered_map<int, UnitInst>& getUnits();
+    std::unordered_map<int, ResourceInst>& getResources();
+    const std::unordered_map<int, WorkerInst>& getWorkers() const;
+    const std::unordered_map<int, BuildingInst>& getBuildings() const;
+    const std::unordered_map<int, UnitInst>& getUnits() const;
+    const std::unordered_map<int, ResourceInst>& getResources() const;
     void addWorkerInst(WorkerInst);
     void addBuildingInst(BuildingInst);
     void addUnitInst(UnitInst);

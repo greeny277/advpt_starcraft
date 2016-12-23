@@ -76,7 +76,8 @@ class WorkerInst : public UnitInst {
 
     public:
         explicit WorkerInst(const UnitBP *unit);
-        void assignToResource(ResourceInst& r);
+        void assignToResource(ResourceInst& r, State&);
+        void stopMining(State &s);
         bool startBuilding(BuildingBP *bbp, State&);
         void stopBuilding();
         bool isBusy() const override;

@@ -183,13 +183,13 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         dependencies.push_back(ent.getBlueprint()->getName());
     });
 
-    // TODO requirement vespin units can only be build of vespinInst exists
+    // TODO requirement vespin units can only be build if vespinInst exists
     for(auto bp : initialUnits) {
         if(bp->getRace() != race) {
             std::cerr << "entities to be build do not belong to one race" << std::endl;
             return false;
         }
-        // check if the building has alle the required dependencies
+        // check if the building has all the required dependencies
         auto requireOneOf = bp->getRequireOneOf();
         bool valid = buildOrderCheckOneOf(requireOneOf, dependencies);
         if(!valid){return false;}
@@ -236,18 +236,22 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
         std::array<std::vector<WorkerInst *>*, 3> workerLists{{&idleWorkers, &mineralWorkers, &gasWorkers}};
         for (auto workers : workerLists) {
             if (!workers->empty()) {
-                if (workers->back()->startBuilding(bpToBuild, s)) {
-                    workers->pop_back();
+                auto worker = workers->back();
+                workers->pop_back();
+                worker->stopMining(s);
+                if (worker->startBuilding(bpToBuild, s)) {
                     buildingStarted = true;
+                } else {
+                    idleWorkers.push_back(worker);
                 }
                 break;
             }
         }
     }
 
-    std::vector<ResourceInst *> minerals;
-    std::vector<ResourceInst *> gas;
-    for (auto res : s.getResources()) {
+    std::vector<ResourceInst*> minerals;
+    std::vector<ResourceInst*> gas;
+    for (auto &res : s.getResources()) {
         if (res.second.isMinerals()) {
             minerals.push_back(&res.second);
         } else {
@@ -261,21 +265,21 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
     if (gasWorkers.size() < gasWorkerCount) {
         std::array<std::vector<WorkerInst *>*, 2> workerLists{{&idleWorkers, &mineralWorkers}};
         for (auto g : gas) {
-            if (g->getFreeWorkerCount() == 0)
-                continue;
-
             for (auto workers : workerLists) {
                 for (auto worker : *workers) {
-                    worker->assignToResource(*g);
+                    if (g->getFreeWorkerCount() > 0) {
+                        worker->assignToResource(*g, s);
+                    }
                 }
             }
         }
     }
     if (!idleWorkers.empty() && mineralWorkerCount != mineralWorkers.size()) {
-        for (auto worker : idleWorkers) {
-            for (auto m : minerals) {
-                if (m->getFreeWorkerCount() > 0)
-                    worker->assignToResource(*m);
+        for (auto m : minerals) {
+            for (auto worker : idleWorkers) {
+                if (m->getFreeWorkerCount() > 0) {
+                    worker->assignToResource(*m, s);
+                }
             }
         }
     }
