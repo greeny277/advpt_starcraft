@@ -45,4 +45,6 @@ public:
     void addResourceInst(ResourceInst);
     void iterEntities(std::function<void(EntityInst&)>);
     void iterEntities(std::function<void(const EntityInst&)>) const;
+    void eraseEntity(int id);
+    EntityInst *getEntity(int id);
 };

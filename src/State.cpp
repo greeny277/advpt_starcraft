@@ -118,3 +118,24 @@ void State::addResourceInst(ResourceInst e) {
     alreadyProduced.insert(e.getBlueprint()->getName());
     resourceMap.insert({e.getID(), e});
 }
+void State::eraseEntity(int id) {
+    buildingMap.erase(id);
+    workerMap.erase(id);
+    unitMap.erase(id);
+    resourceMap.erase(id);
+}
+EntityInst *State::getEntity(int id) {
+    auto bent = buildingMap.find(id);
+    if (bent != buildingMap.end())
+        return &bent->second;
+    auto went = workerMap.find(id);
+    if (went != workerMap.end())
+        return &went->second;
+    auto uent = unitMap.find(id);
+    if (uent != unitMap.end())
+        return &uent->second;
+    auto rent = resourceMap.find(id);
+    if (rent != resourceMap.end())
+        return &rent->second;
+    return nullptr;
+}

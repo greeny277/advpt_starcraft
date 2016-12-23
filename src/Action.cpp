@@ -104,42 +104,16 @@ void BuildEntityAction::finish(State &s) {
         s.getWorkers().at(worker).stopBuilding();
     }
     if(producedBy != -1){
-        if(s.getBuildings().find(producedBy) != s.getBuildings().end()) {
-            auto building = s.getBuildings().find(producedBy);
-            // increase freeBuildSlots
-            building->second.incFreeBuildSlots();
-            // Check if building is morphing
-            if(building->second.isMorphing()){
-                s.getBuildings().erase(building);
-            }
-        }
-        // Check if worker is morphing
-        else if(s.getWorkers().find(producedBy) != s.getWorkers().end()) {
-            auto worker = s.getWorkers().find(producedBy);
-            if(worker->second.isMorphing()){
-                s.getWorkers().erase(worker);
-            }
-        }
-        // Check if unit is morphing
-        else if(s.getUnits().find(producedBy) != s.getUnits().end()) {
-            auto unit = s.getUnits().find(producedBy);
-            if(unit->second.isMorphing()){
-                s.getUnits().erase(unit);
-            }
-        }
-        else{
-            // A resource is morphing
-            auto resource = s.getResources().find(producedBy);
-            if(resource == s.getResources().end()){
-                std::cerr << "BuildEntityAction::finish(): Bad error. Couldn't find any instance in state to given Producer-ID" << std::endl;
-                return;
-            }
+        EntityInst *producer = s.getEntity(producedBy);
 
-            s.getResources().at(id).copyRemaingResources(resource->second);
+        if (producer->isMorphing()) {
+            s.eraseEntity(producedBy);
 
-            if(resource->second.isMorphing()){
-                s.getResources().erase(resource);
+            if(auto resource = dynamic_cast<ResourceInst*>(producer)) {
+                s.getResources().at(id).copyRemaingResources(*resource);
             }
+        } else if (auto building = dynamic_cast<BuildingInst*>(producer)) {
+            building->incFreeBuildSlots();
         }
     }
     // TODO: check if building produces two or one unit at the same time

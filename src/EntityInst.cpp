@@ -25,7 +25,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
     }
     // check if this building can produce the unit. Therefore get list of buildings which
     // can produce the entity and check if this building is one of them
-    std::vector<std::string> buildingNames = entity->getProducedByOneOf();
+    const std::vector<std::string> &buildingNames = entity->getProducedByOneOf();
     auto it = std::find(std::begin(buildingNames), std::end(buildingNames), getBlueprint()->getName());
     if(it == std::end(buildingNames)){
         // this building can not produce the unit
@@ -33,10 +33,10 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
     }
 
     // check requirements
-    std::vector<std::string> requirementNames = entity->getRequireOneOf();
+    const std::vector<std::string> &requirementNames = entity->getRequireOneOf();
     bool foundRequirement = false;
-    for(auto it = requirementNames.begin(); it != requirementNames.end(); it++){
-        auto iterProduced = std::find(std::begin(s.alreadyProduced), std::end(s.alreadyProduced), *it);
+    for (auto &req : requirementNames) {
+        auto iterProduced = std::find(std::begin(s.alreadyProduced), std::end(s.alreadyProduced), req);
         if(iterProduced != std::end(s.alreadyProduced)){
             foundRequirement = true;
             break;
