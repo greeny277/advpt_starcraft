@@ -11,6 +11,7 @@ class Ability {
             energyCosts(energyCosts_) {
         }
         virtual void create(State&, int triggeredBy) const = 0;
+        virtual ~Ability() = default;
 };
 
 class MuleAbility : public Ability {

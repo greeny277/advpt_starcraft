@@ -1,7 +1,7 @@
 // vim: ts=4:sw=4 expandtab
 #include "State.h"
 
-State::State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints_) :
+State::State(const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints_) :
     workerMap{},
     buildingMap{},
     unitMap{},
@@ -16,15 +16,15 @@ State::State(const std::string &race, const std::unordered_map<std::string, Enti
     alreadyProduced{} {
 
         if(race == "protoss") {
-            auto probe = static_cast<const UnitBP*>(blueprints.at("probe"));
+            auto probe = static_cast<const UnitBP*>(blueprints.at("probe").get());
             for (size_t i = 0; i < 6; i++) {
                 probe->newInstance(*this);
             }
-            blueprints.at("nexus")->newInstance(*this);
+            blueprints.at("nexus").get()->newInstance(*this);
         }
 
         if(race == "terran") {
-            auto scv = static_cast<const UnitBP*>(blueprints.at("scv"));
+            auto scv = static_cast<const UnitBP*>(blueprints.at("scv").get());
             for (size_t i = 0; i < 6; i++) {
                 scv->newInstance(*this);
             }
@@ -32,13 +32,13 @@ State::State(const std::string &race, const std::unordered_map<std::string, Enti
         }
 
         if (race == "zerg") {
-            auto drone = static_cast<const UnitBP*>(blueprints.at("drone"));
+            auto drone = static_cast<const UnitBP*>(blueprints.at("drone").get());
             for (size_t i = 0; i < 6; i++) {
                 drone->newInstance(*this);
             }
-            blueprints.at("hatchery")->newInstance(*this);
+            blueprints.at("hatchery").get()->newInstance(*this);
 
-            auto larva = static_cast<const UnitBP*>(blueprints.at("larva"));
+            auto larva = static_cast<const UnitBP*>(blueprints.at("larva").get());
             for (size_t i = 0; i < 3; i++) {
                 larva->newInstance(*this);
             }

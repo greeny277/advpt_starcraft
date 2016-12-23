@@ -18,7 +18,8 @@ static std::vector<std::string> parseRequirements(const std::string &requirement
 static std::vector<Ability*> createAbilities(const std::string &name) {
     std::vector<Ability*> abilities;
     if (name == "orbital_command") {
-        abilities.push_back(new MuleAbility());
+        static MuleAbility muleAbility;
+        abilities.push_back(&muleAbility);
     }
     // TODO inject, chronoboost
     return abilities;

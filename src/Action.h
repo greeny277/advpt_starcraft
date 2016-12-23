@@ -14,6 +14,8 @@ class Action {
     private:
         int startPoint;
         int timeToFinish;
+    protected:
+        virtual ~Action() = default;
     public:
         Action(int startPoint_, int timeToFinish_);
         void tick();
@@ -35,6 +37,7 @@ class AbilityAction : public Action {
             const int targetBuilding_,
             int startPoint_,
             int timeToFinish_);
+        ~AbilityAction() = default;
 
     public:
         nlohmann::json printStartJSON() override;

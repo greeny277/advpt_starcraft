@@ -24,11 +24,11 @@ public:
     int currentMaxSupply;
     std::vector<MuleAction> muleActions;
     std::vector<BuildEntityAction> buildActions;
-    const std::unordered_map<std::string, EntityBP*> &blueprints;
+    const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints;
     std::set<std::string> alreadyProduced; // Keeps track of entities which were produced once at least
 
 public:
-    State(const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints);
+    State(const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints);
     nlohmann::json getUnitJSON();
     std::unordered_map<int, WorkerInst>& getWorkers();
     std::unordered_map<int, BuildingInst>& getBuildings();

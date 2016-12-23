@@ -39,6 +39,7 @@ class EntityBP {
         const std::vector<std::string>& getMorphedFrom() const;
         int getSupplyProvided() const;
         virtual int newInstance(State&) const = 0;
+        virtual ~EntityBP() = default;
 };
 
 class UnitBP : public EntityBP {

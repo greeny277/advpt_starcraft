@@ -15,8 +15,8 @@
 #include "Action.h"
 #include "Ability.h"
 
-std::unordered_map<std::string, EntityBP*> readConfig() {
-    std::unordered_map<std::string, EntityBP*> res;
+std::unordered_map<std::string, std::unique_ptr<EntityBP>> readConfig() {
+    std::unordered_map<std::string, std::unique_ptr<EntityBP>> res;
 
     std::string line;
     std::string race;
@@ -33,19 +33,20 @@ std::unordered_map<std::string, EntityBP*> readConfig() {
         for (i = 0; std::getline(lineStream, cells[i], ',') && i < 16; i++) {
         }
 
+        EntityBP* ent;
         if (cells[15] == "building") {
-            res.insert({cells[0], new BuildingBP(cells)});
+            ent = new BuildingBP(cells);
         } else {
-            res.insert({cells[0], new UnitBP(cells)});
+            ent = new UnitBP(cells);
         }
-
+        res.emplace(cells[0], std::unique_ptr<EntityBP>(ent));
 
     }
     return res;
 }
 
 
-std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, EntityBP*> &blueprints, const char *const fname) {
+std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints, const char *const fname) {
     std::deque<EntityBP*> bps;
     std::fstream input;
     input.open(fname);
@@ -55,7 +56,7 @@ std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, Entit
         if(itEntBP == blueprints.end()){
             return {};
         }
-        bps.push_back(itEntBP->second);
+        bps.push_back(itEntBP->second.get());
     }
     return bps;
 }
@@ -113,7 +114,7 @@ static nlohmann::json printJSON(State &curState) {
     message["events"] = events;
     return message;
 }
-static nlohmann::json getInitialJSON(const std::unordered_map<std::string, EntityBP*> &blueprints,
+static nlohmann::json getInitialJSON(const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints,
         const std::deque<EntityBP*> &initialUnits,
         const std::string &race,
         bool valid) {
@@ -123,10 +124,10 @@ static nlohmann::json getInitialJSON(const std::unordered_map<std::string, Entit
     j["game"] = game;
     j["buildListValid"] = valid ? "1" : "0"; // WTF? why strings when JSON has booleans?
 
-    for (const auto bp : blueprints) {
+    for (const auto &bp : blueprints) {
         nlohmann::json positions = nlohmann::json::array();
         for (size_t i = 0; i < initialUnits.size(); i++) {
-            if (initialUnits[i] == bp.second) {
+            if (initialUnits[i] == bp.second.get()) {
                 positions.push_back(std::to_string(i)); // again, why strings???
             }
         }
@@ -176,7 +177,7 @@ static bool buildOrderCheckOneOf(std::vector<std::string> &oneOf, std::vector<st
 
 }
 
-static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints ) {
+static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints ) {
     State s(race, blueprints);
     std::vector<std::string> dependencies;
     s.iterEntities([&](const EntityInst &ent) {
@@ -288,7 +289,7 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 }
 
 int main(int argc, char *argv[]) {
-    const std::unordered_map<std::string, EntityBP*> blueprints = readConfig();
+    const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
     for (int i = 1; i < argc; i++) {
         auto initialUnits = readBuildOrder(blueprints, argv[i]);
         if(initialUnits.empty()){

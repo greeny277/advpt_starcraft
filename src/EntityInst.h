@@ -17,6 +17,7 @@ class EntityInst {
         static int next_id;
     protected:
         bool checkBuildRequirements(EntityBP*, State&);
+        ~EntityInst() = default;
     public:
         virtual bool isBusy() const;
         bool isMorphing() const;
@@ -32,8 +33,9 @@ class EntityInst {
 };
 class UnitInst : public EntityInst {
     public:
-         bool isBusy() const override;
-         explicit UnitInst(const UnitBP *unit);
+        bool isBusy() const override;
+        explicit UnitInst(const UnitBP *unit);
+        virtual ~UnitInst() = default;
 };
 
 class BuildingInst : public EntityInst {
@@ -41,11 +43,12 @@ class BuildingInst : public EntityInst {
         int freeBuildSlots;
         bool chronoBoostActivated;
     public:
-         explicit BuildingInst(const BuildingBP *building);
-         bool isBusy() const override;
-         bool produceUnit(UnitBP *entity, State &s);
-         void incFreeBuildSlots();
-         bool canMorph() const override;
+        explicit BuildingInst(const BuildingBP *building);
+        bool isBusy() const override;
+        bool produceUnit(UnitBP *entity, State &s);
+        void incFreeBuildSlots();
+        bool canMorph() const override;
+        virtual ~BuildingInst() = default;
 };
 
 class ResourceInst : public BuildingInst {
@@ -68,6 +71,7 @@ class ResourceInst : public BuildingInst {
         bool isGas() const;
         bool isMinerals() const;
         void copyRemaingResources(ResourceInst &other);
+        ~ResourceInst() override = default;
 };
 class WorkerInst : public UnitInst {
     private:
@@ -83,9 +87,11 @@ class WorkerInst : public UnitInst {
         bool isBusy() const override;
         bool isMiningMinerals(State&) const;
         bool isMiningGas(State&) const;
+        virtual ~WorkerInst() override = default;
 };
 
 class MuleInst : public WorkerInst {
     public:
         explicit inline MuleInst(const UnitBP *unit) : WorkerInst(unit) {}
+        ~MuleInst() override = default;
 };
