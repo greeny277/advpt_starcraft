@@ -162,7 +162,7 @@ static bool checkAndRunAbilities(State &s) {
     return result;
 }
 
-static bool buildOrderCheckOneOf(std::vector<std::string> oneOf, std::vector<std::string> dependencies) {
+static bool buildOrderCheckOneOf(std::vector<std::string> &oneOf, std::vector<std::string> &dependencies) {
 
         if(!oneOf.empty()) {
             for(auto req: oneOf) {
@@ -176,21 +176,12 @@ static bool buildOrderCheckOneOf(std::vector<std::string> oneOf, std::vector<std
 
 }
 
-static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string race, const std::unordered_map<std::string, EntityBP*> &blueprints ) {
+static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race, const std::unordered_map<std::string, EntityBP*> &blueprints ) {
     State s(race, blueprints);
     std::vector<std::string> dependencies;
-    for(auto unit: s.getUnits()) {
-        dependencies.push_back(unit.second.getBlueprint()->getName());
-    }
-    for(auto worker: s.getWorkers()) {
-        dependencies.push_back(worker.second.getBlueprint()->getName());
-    }
-    for(auto building: s.getBuildings()) {
-        dependencies.push_back(building.second.getBlueprint()->getName());
-    }
-    for(auto resource: s.getResources()) {
-        dependencies.push_back(resource.second.getBlueprint()->getName());
-    }
+    s.iterEntities([&](const EntityInst &ent) {
+        dependencies.push_back(ent.getBlueprint()->getName());
+    });
 
     // TODO requirement vespin units can only be build of vespinInst exists
     for(auto bp : initialUnits) {
