@@ -320,7 +320,7 @@ int main(int argc, char *argv[]) {
                     states.push_back(states.back());
                 }
                 State &curState = states.back();
-                // increment time attribut
+                // increment time attribute
                 curState.time++;
                 int currentTime = states.size();
 
@@ -356,9 +356,8 @@ int main(int argc, char *argv[]) {
                         });
                     } else {
                         // have redistributeWorkers() build the building
-                        auto building = dynamic_cast<BuildingBP*>(buildNext);
-                        assert(building != nullptr && "no idea how to build this thing");
-                        workerTask = building;
+                        workerTask = dynamic_cast<BuildingBP*>(buildNext);
+                        assert(workerTask != nullptr && "no idea how to build this thing");
                     }
                 }
 
@@ -370,7 +369,10 @@ int main(int argc, char *argv[]) {
             }
 
             if (!buildOrder.empty()) {
+                std::cerr << "aborted simulation after too many iterations" << std::endl;
                 valid = false;
+                //j["buildListValid"] = "0";
+                // TODO: activate this
                 j.erase(j.find("messages"));
             }
         }
