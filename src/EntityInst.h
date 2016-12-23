@@ -27,7 +27,7 @@ class EntityInst {
         int getID() const;
         inline int getCurrentEnergy() const { return currentMicroEnergy / 1000000; }
         inline void removeEnergy(int howMuch) { currentMicroEnergy -= howMuch * 1000000; }
-        inline void restoreEnergy() { currentMicroEnergy = std::max(blueprint->getMaxEnergy() * 1000000, currentMicroEnergy + 562500); }
+        inline void restoreEnergy() { currentMicroEnergy = std::min(blueprint->getMaxEnergy() * 1000000, currentMicroEnergy + 562500); }
         virtual bool canMorph() const;
 };
 class UnitInst : public EntityInst {
