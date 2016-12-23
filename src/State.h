@@ -22,7 +22,6 @@ public:
     int currentSupply;
     Resources resources;
     int currentMaxSupply;
-    int timestamp;
     std::vector<MuleAction> muleActions;
     std::vector<BuildEntityAction> buildActions;
     const std::unordered_map<std::string, EntityBP*> &blueprints;

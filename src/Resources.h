@@ -28,5 +28,5 @@ class Resources{
         Resources operator-(Resources other) const;
         Resources operator-() const;
         Resources operator*(int factor) const;
-        bool allValuesLargerThan(Resources other) const;
+        bool allValuesLargerEquals(Resources other) const;
 };

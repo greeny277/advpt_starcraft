@@ -27,6 +27,6 @@ Resources Resources::operator*(int factor) const {
     return Resources(milliGas * factor, milliMinerals * factor);
 }
 
-bool Resources::allValuesLargerThan(Resources other) const {
-    return milliGas > other.milliGas && milliMinerals > other.milliMinerals;
+bool Resources::allValuesLargerEquals(Resources other) const {
+    return milliGas >= other.milliGas && milliMinerals >= other.milliMinerals;
 }

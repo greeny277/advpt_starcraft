@@ -27,13 +27,13 @@ std::unordered_map<std::string, EntityBP*> readConfig() {
             continue;
         }
 
-        std::string cells[15];
+        std::string cells[16];
         std::stringstream lineStream(line);
         size_t i;
-        for (i = 0; std::getline(lineStream, cells[i], ',') && i < 15; i++) {
+        for (i = 0; std::getline(lineStream, cells[i], ',') && i < 16; i++) {
         }
 
-        if (cells[1] == "building") {
+        if (cells[15] == "building") {
             res.insert({cells[0], new BuildingBP(cells)});
         } else {
             res.insert({cells[0], new UnitBP(cells)});
@@ -45,8 +45,8 @@ std::unordered_map<std::string, EntityBP*> readConfig() {
 }
 
 
-std::vector<EntityBP*> readBuildOrder(const std::unordered_map<std::string, EntityBP*> &blueprints, const char *const fname) {
-    std::vector<EntityBP*> bps;
+std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, EntityBP*> &blueprints, const char *const fname) {
+    std::deque<EntityBP*> bps;
     std::fstream input;
     input.open(fname);
     std::string line;
@@ -72,25 +72,23 @@ void resourceUpdate(State &state) {
 template<typename T>
 static void actionsToJSON(std::vector<T>& actions, nlohmann::json& events, int timestamp) {
     for(auto action = actions.begin(); action != actions.end(); ){
-        nlohmann::json m;
         if (action->isReady()) {
-            m = action->printEndJSON();
-            action = actions.erase(action);
+            events.push_back(action->printEndJSON());
+            std::swap(*action, actions.back());
+            actions.pop_back();
         } else if (action->getStartPoint() == timestamp) {
-            m = action->printStartJSON();
+            events.push_back(action->printStartJSON());
             action++;
-        }
-
-        if (!m.empty()) {
-            events.push_back(m);
+        } else {
+            action++;
         }
     }
 
 }
 
-static nlohmann::json printJSON(State &curState, int timestamp) {
+static nlohmann::json printJSON(State &curState) {
     nlohmann::json message;
-    message["time"] = timestamp;
+    message["time"] = curState.time;
     message["status"]["resources"]["minerals"] = curState.resources.getMinerals();
     message["status"]["resources"]["vespene"] = curState.resources.getGas();
     message["status"]["resources"]["supply"] = curState.currentMaxSupply;
@@ -110,13 +108,13 @@ static nlohmann::json printJSON(State &curState, int timestamp) {
     message["status"]["workers"]["minerals"] = mineralWorkers;
     message["status"]["workers"]["vespene"] = gasWorkers;
     auto events = nlohmann::json::array();
-    actionsToJSON(curState.buildActions, events, timestamp);
-    actionsToJSON(curState.buildActions, events, timestamp);
+    actionsToJSON(curState.buildActions, events, curState.time);
+    actionsToJSON(curState.muleActions, events, curState.time);
     message["events"] = events;
     return message;
 }
 static nlohmann::json getInitialJSON(const std::unordered_map<std::string, EntityBP*> &blueprints,
-        const std::vector<EntityBP*> &initialUnits,
+        const std::deque<EntityBP*> &initialUnits,
         const std::string &race,
         bool valid) {
     nlohmann::json j;
@@ -150,12 +148,12 @@ static void checkActions(std::vector<T>& actions, State& s){
     return;
 }
 
-static bool checkAndRunAbilities(int currentTime, State &s) {
+static bool checkAndRunAbilities(State &s) {
     bool result = false;
     s.iterEntities([&](EntityInst& e) {
         for (const Ability *ab : e.getBlueprint()->getAbilities()) {
             if (e.getCurrentEnergy() >= ab->energyCosts && !result) {
-                ab->create(currentTime, s, e.getID());
+                ab->create(s, e.getID());
                 e.removeEnergy(ab->energyCosts);
                 result = true;
             }
@@ -178,7 +176,7 @@ static bool buildOrderCheckOneOf(std::vector<std::string> oneOf, std::vector<std
 
 }
 
-static bool validateBuildOrder(const std::vector<EntityBP*> &initialUnits, const std::string race, const std::unordered_map<std::string, EntityBP*> &blueprints ) {
+static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string race, const std::unordered_map<std::string, EntityBP*> &blueprints ) {
     State s(race, blueprints);
     std::vector<std::string> dependencies;
     for(auto unit: s.getUnits()) {
@@ -210,17 +208,14 @@ static bool validateBuildOrder(const std::vector<EntityBP*> &initialUnits, const
         valid = buildOrderCheckOneOf(producedByOneOf, dependencies);
         if(!valid){return false;}
         
-        auto morphedFrom = bp->getMorphedFrom();
-        if(morphedFrom.begin()->compare("") != 0) {
-            for(std::string req : morphedFrom) {
-                auto position =  std::find(dependencies.begin(), dependencies.end(), req);
-                if (position == dependencies.end()) {
-                    std::cerr << "entity:" << bp->getName() << " cannot be upgraded, not exist yet: " << req << std::endl;
-                    return false;
-                } else {
-                    dependencies.erase(position);
-                    break;
-                }
+        for(const std::string &req : bp->getMorphedFrom()) {
+            auto position =  std::find(dependencies.begin(), dependencies.end(), req);
+            if (position == dependencies.end()) {
+                std::cerr << "entity:" << bp->getName() << " cannot be upgraded, not exist yet: " << req << std::endl;
+                return false;
+            } else {
+                dependencies.erase(position);
+                break;
             }
         }
 
@@ -229,7 +224,9 @@ static bool validateBuildOrder(const std::vector<EntityBP*> &initialUnits, const
     return true;
 }
 
-static void redistributeWorkers(State &s, BuildingBP *bpToBuild) {
+static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
+    bool buildingStarted = false;
+
     std::vector<WorkerInst *> idleWorkers;
     std::vector<WorkerInst *> mineralWorkers;
     std::vector<WorkerInst *> gasWorkers;
@@ -250,6 +247,7 @@ static void redistributeWorkers(State &s, BuildingBP *bpToBuild) {
             if (!workers->empty()) {
                 if (workers->back()->startBuilding(bpToBuild, s)) {
                     workers->pop_back();
+                    buildingStarted = true;
                 }
                 break;
             }
@@ -290,6 +288,8 @@ static void redistributeWorkers(State &s, BuildingBP *bpToBuild) {
             }
         }
     }
+
+    return buildingStarted;
 }
 
 int main(int argc, char *argv[]) {
@@ -304,15 +304,15 @@ int main(int argc, char *argv[]) {
         bool valid = validateBuildOrder(initialUnits, race, blueprints);
         nlohmann::json j = getInitialJSON(blueprints, initialUnits, race, valid);
 
-        std::queue<EntityBP*, std::vector<EntityBP*>> buildOrder(initialUnits);
+        std::queue<EntityBP*> buildOrder(initialUnits);
 
 
         if (valid) {
             std::vector<State> states;
             auto messages = nlohmann::json::array();
-            j["messages"] = messages;
 
-            while (states.size() < 1000 && !buildOrder.empty()) {
+            bool stillBuilding = false;
+            while (states.size() < 1000 && (stillBuilding || !buildOrder.empty())) {
                 if (states.empty()) {
                     states.push_back(State(race, blueprints));
                     j["initialUnits"] = states.back().getUnitJSON();
@@ -322,7 +322,6 @@ int main(int argc, char *argv[]) {
                 State &curState = states.back();
                 // increment time attribut
                 curState.time++;
-                int currentTime = states.size();
 
                 // timestep 1
                 resourceUpdate(curState);
@@ -332,27 +331,28 @@ int main(int argc, char *argv[]) {
 
                 // timestep 3
                 checkActions(curState.muleActions, curState);
-                bool canBuild = checkAndRunAbilities(currentTime, curState);
+                bool canBuild = !checkAndRunAbilities(curState);
 
                 // timestep 3.5: maybe build something
                 BuildingBP *workerTask = nullptr;
-                if (canBuild) {
+                bool buildStarted = false;
+                if (canBuild && !buildOrder.empty()) {
                     auto buildNext = buildOrder.front();
                     auto unit = dynamic_cast<UnitBP*>(buildNext);
                     if (buildNext->getMorphedFrom().size()) {
                         // find a non-busy entity to upgrade/morph
                         curState.iterEntities([&](EntityInst &ent) {
-                            if (!canBuild)
+                            if (buildStarted)
                                 return;
-                            canBuild = ent.startMorphing(buildNext, curState);
+                            buildStarted = ent.startMorphing(buildNext, curState);
                         });
                     } else if(unit != nullptr) {
                         // find a building where we can build the unit
                         curState.iterEntities([&](EntityInst &ent) {
                             auto building = dynamic_cast<BuildingInst*>(&ent);
-                            if (!canBuild || building == nullptr)
+                            if (buildStarted || building == nullptr)
                                 return;
-                            canBuild = building->produceUnit(unit, curState);
+                            buildStarted = building->produceUnit(unit, curState);
                         });
                     } else {
                         // have redistributeWorkers() build the building
@@ -363,15 +363,21 @@ int main(int argc, char *argv[]) {
                 }
 
                 // timestep 4
-                redistributeWorkers(curState, workerTask);
+                buildStarted |= redistributeWorkers(curState, workerTask);
+                if (buildStarted)
+                    buildOrder.pop();
 
                 // timestep 5
-                messages.push_back(printJSON(curState, currentTime));
+                messages.push_back(printJSON(curState));
+
+                stillBuilding = !curState.buildActions.empty();
             }
 
             if (!buildOrder.empty()) {
+                std::cerr << "Build order could not be finished." << std::endl;
                 valid = false;
-                j.erase(j.find("messages"));
+            } else {
+                j["messages"] = messages;
             }
         }
 

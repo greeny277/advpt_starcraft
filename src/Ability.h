@@ -10,11 +10,11 @@ class Ability {
         inline explicit Ability(int energyCosts_) :
             energyCosts(energyCosts_) {
         }
-        virtual void create(int, State&, int triggeredBy) const = 0;
+        virtual void create(State&, int triggeredBy) const = 0;
 };
 
 class MuleAbility : public Ability {
     public:
         MuleAbility();
-        void create(int startPoint, State &s, int triggeredBy) const override;
+        void create(State &s, int triggeredBy) const override;
 };

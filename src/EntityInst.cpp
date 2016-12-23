@@ -19,7 +19,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
         return false;
     }
     // check for resources
-    if(!s.resources.allValuesLargerThan(entity->getCosts())) {
+    if(!s.resources.allValuesLargerEquals(entity->getCosts())) {
         // Not enough resources available
         return false;
     }
@@ -42,7 +42,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
             break;
         }
     }
-    if(!foundRequirement)
+    if(!foundRequirement && !requirementNames.empty())
         return false;
 
     // TODO: supply
@@ -74,6 +74,8 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
 
 EntityInst::EntityInst(const EntityBP *bp) :
     blueprint(bp),
+    currentMicroEnergy(bp->getStartEnergy() * 1000000),
+    morphing(false),
     id(next_id++) {
 }
 

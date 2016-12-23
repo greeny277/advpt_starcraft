@@ -55,7 +55,7 @@ void MuleAction::finish(State &s) {
 
 BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
         int producedBy_, State &s) :
-    Action(s.timestamp,blueprint_->getBuildTime()),
+    Action(s.time, blueprint_->getBuildTime()),
     blueprint(blueprint_),
     worker(worker_),
     produced{},
