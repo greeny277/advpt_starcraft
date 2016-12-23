@@ -9,7 +9,9 @@ static std::vector<std::string> parseRequirements(const std::string &requirement
     std::stringstream requirementStream(requirements);
     std::string req;
     while (std::getline(requirementStream, req, '/')) {
-        requireOneOf.push_back(req);
+        if (!req.empty()) {
+            requireOneOf.push_back(req);
+        }
     }
     return requireOneOf;
 }
@@ -27,12 +29,12 @@ EntityBP::EntityBP(std::string data[15]) :
     race(data[8]),
     startEnergy(std::stoi(data[6])),
     maxEnergy(std::stoi(data[7])),
-    costs(Resources(std::stoi(data[1]), std::stoi(data[2]))),
+    costs(Resources(std::stoi(data[2]), std::stoi(data[1]))),
     buildTime(std::stoi(data[3])),
     abilities(createAbilities(name)),
     requireOneOf(parseRequirements(data[11])),
     producedByOneOf(parseRequirements(data[10])),
-    morphedFrom({data[9]}),
+    morphedFrom(data[9].empty() ? std::vector<std::string>{} : std::vector<std::string>{data[9]}),
     supplyProvided(std::stoi(data[5])) {
 }
 

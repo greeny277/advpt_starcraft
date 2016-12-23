@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
 project (SC2BuildSimulator)
 add_executable (SC2BuildSimulator EntityBP.cpp EntityInst.cpp Main.cpp Resources.cpp State.cpp Action.cpp Ability.cpp)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -pedantic -Wextra -Weffc++ -Wnull-dereference -Wsequence-point -Wshadow")
-set(CMAKE_CXX_COMPILER "clang++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -pedantic -Wextra -Weffc++ -Wnull-dereference -Wsequence-point -Wshadow -O0 -g ")
+set(CMAKE_CXX_COMPILER "g++")

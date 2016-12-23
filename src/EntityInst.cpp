@@ -19,7 +19,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
         return false;
     }
     // check for resources
-    if(!s.resources.allValuesLargerThan(entity->getCosts())) {
+    if(!s.resources.allValuesLargerEquals(entity->getCosts())) {
         // Not enough resources available
         return false;
     }
@@ -27,7 +27,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
     // can produce the entity and check if this building is one of them
     const std::vector<std::string> &buildingNames = entity->getProducedByOneOf();
     auto it = std::find(std::begin(buildingNames), std::end(buildingNames), getBlueprint()->getName());
-    if(it == std::end(buildingNames)){
+    if(!buildingNames.empty() && it == std::end(buildingNames)){
         // this building can not produce the unit
         return false;
     }
@@ -42,7 +42,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
             break;
         }
     }
-    if(!foundRequirement)
+    if(!foundRequirement && !requirementNames.empty())
         return false;
 
     // TODO: supply
@@ -74,6 +74,8 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
 
 EntityInst::EntityInst(const EntityBP *bp) :
     blueprint(bp),
+    currentMicroEnergy(bp->getStartEnergy() * 1000000),
+    morphing(false),
     id(next_id++) {
 }
 
@@ -137,7 +139,7 @@ Resources ResourceInst::mine() {
         out.setMinerals(remaining.getMinerals());
     if (out.getGas() > remaining.getGas())
         out.setGas(remaining.getGas());
-    remaining = remaining - out;
+    remaining -= out;
     return out;
 }
 
@@ -166,9 +168,9 @@ bool ResourceInst::removeWorker(){
 int ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
 int ResourceInst::getFreeWorkerCount() const { return maxWorkerSlots - activeWorkerSlots; }
 
-bool ResourceInst::isGas() const { return miningRate.getGas() > 0; }
+bool ResourceInst::isGas() const { return (miningRate * 1000).getGas() > 0; }
 
-bool ResourceInst::isMinerals() const { return miningRate.getMinerals() > 0; }
+bool ResourceInst::isMinerals() const { return (miningRate * 1000).getMinerals() > 0; }
 void ResourceInst::copyRemaingResources(ResourceInst &other) {
     remaining = other.remaining;
     activeWorkerSlots = other.activeWorkerSlots;
@@ -178,16 +180,24 @@ WorkerInst::WorkerInst(const UnitBP *unit) :
     UnitInst(unit),
     workingResource(-1),
     isBuilding(false) {
+}
+void WorkerInst::stopMining(State &s) {
+    if (workingResource != -1) {
+        s.getResources().at(workingResource).removeWorker();
     }
-void WorkerInst::assignToResource(ResourceInst& r){
+    workingResource = -1;
+}
+void WorkerInst::assignToResource(ResourceInst& r, State &s){
+    stopMining(s);
     workingResource = r.getID();
+    r.addWorker();
 }
 bool WorkerInst::startBuilding(BuildingBP *bbp, State &s) {
     if (isMorphing()) {
         return false;
     }
 
-    workingResource = -1;
+    stopMining(s);
     if (!checkBuildRequirements(bbp, s) || !bbp->getMorphedFrom().empty()) {
         return false;
     }
@@ -198,7 +208,6 @@ bool WorkerInst::startBuilding(BuildingBP *bbp, State &s) {
 
 void WorkerInst::stopBuilding() {
     isBuilding = false;
-    return;
 }
 bool WorkerInst::isBusy() const { return isBuilding || workingResource != -1; }
 bool WorkerInst::isMiningGas(State &s) const {

@@ -15,18 +15,18 @@ void Resources::operator-=(Resources other) {
     milliMinerals -= other.milliMinerals;
 }
 Resources Resources::operator+(Resources other) const {
-    return Resources(milliGas + other.milliGas, milliMinerals + other.milliMinerals);
+    return Resources(milliGas + other.milliGas, milliMinerals + other.milliMinerals, 1000);
 }
 Resources Resources::operator-(Resources other) const {
-    return Resources(milliGas - other.milliGas, milliMinerals - other.milliMinerals);
+    return Resources(milliGas - other.milliGas, milliMinerals - other.milliMinerals, 1000);
 }
 Resources Resources::operator-() const {
-    return Resources(-milliGas, -milliMinerals);
+    return Resources(-milliGas, -milliMinerals, 1000);
 }
 Resources Resources::operator*(int factor) const {
-    return Resources(milliGas * factor, milliMinerals * factor);
+    return Resources(milliGas * factor, milliMinerals * factor, 1000);
 }
 
-bool Resources::allValuesLargerThan(Resources other) const {
-    return milliGas > other.milliGas && milliMinerals > other.milliMinerals;
+bool Resources::allValuesLargerEquals(Resources other) const {
+    return milliGas >= other.milliGas && milliMinerals >= other.milliMinerals;
 }

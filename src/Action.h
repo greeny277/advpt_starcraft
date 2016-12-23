@@ -26,9 +26,9 @@ class Action {
 
 class AbilityAction : public Action {
     private:
-        const char *const name;
-        const int triggeredBy;
-        const int targetBuilding; // optional
+        const char *name;
+        int triggeredBy;
+        int targetBuilding; // optional
     protected:
         AbilityAction(const char *name_,
             const int triggeredBy_,

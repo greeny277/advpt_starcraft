@@ -26,7 +26,6 @@ class EntityBP {
 
         explicit EntityBP(std::string data[15]);
 
-
     public:
         const std::string & getName() const;
         const std::string & getRace() const;
@@ -40,7 +39,6 @@ class EntityBP {
         const std::vector<std::string>& getMorphedFrom() const;
         int getSupplyProvided() const;
         virtual int newInstance(State&) const = 0;
-
 };
 
 class UnitBP : public EntityBP {

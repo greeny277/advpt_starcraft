@@ -10,7 +10,6 @@ State::State(const std::string &race, const std::unordered_map<std::string, Enti
     currentSupply(0),
     resources{0, 50},
     currentMaxSupply(0),
-    timestamp(0),
     muleActions{},
     buildActions{},
     blueprints(blueprints_),
@@ -77,28 +76,28 @@ void State::iterEntities(std::function<void(const EntityInst&)> f) const {
     const_cast<State*>(this)->iterEntities(callback);
 }
 
-std::map<int,WorkerInst>& State::getWorkers(){
+std::unordered_map<int,WorkerInst>& State::getWorkers(){
     return workerMap;
 }
-std::map<int,BuildingInst>& State::getBuildings(){
+std::unordered_map<int,BuildingInst>& State::getBuildings(){
     return buildingMap;
 }
-std::map<int,UnitInst>& State::getUnits(){
+std::unordered_map<int,UnitInst>& State::getUnits(){
     return unitMap;
 }
-std::map<int,ResourceInst>& State::getResources(){
+std::unordered_map<int,ResourceInst>& State::getResources(){
     return resourceMap;
 }
-const std::map<int,WorkerInst>& State::getWorkers() const {
+const std::unordered_map<int,WorkerInst>& State::getWorkers() const {
     return workerMap;
 }
-const std::map<int,BuildingInst>& State::getBuildings() const {
+const std::unordered_map<int,BuildingInst>& State::getBuildings() const {
     return buildingMap;
 }
-const std::map<int,UnitInst>& State::getUnits() const {
+const std::unordered_map<int,UnitInst>& State::getUnits() const {
     return unitMap;
 }
-const std::map<int,ResourceInst>& State::getResources() const {
+const std::unordered_map<int,ResourceInst>& State::getResources() const {
     return resourceMap;
 }
 
