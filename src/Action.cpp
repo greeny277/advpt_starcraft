@@ -22,8 +22,8 @@ AbilityAction::AbilityAction(const char *name_,
         int timeToFinish_):
     Action(startPoint_, timeToFinish_),
     name(name_),
-    triggeredBy(triggeredBy_),
-    targetBuilding(targetBuilding_) {
+    targetBuilding(targetBuilding_),
+    triggeredBy(triggeredBy_) {
 }
 
 int Action::getStartPoint() const{
@@ -44,13 +44,11 @@ nlohmann::json AbilityAction::printEndJSON() {
     nlohmann::json j;
     return j;
 }
-MuleAction::MuleAction(int startPoint_, int triggeredBy_, int worker_) :
-    AbilityAction("mule", triggeredBy_, -1, startPoint_, 90),
-    worker(worker_) {
+MuleAction::MuleAction(int startPoint_, int triggeredBy_) :
+    AbilityAction("mule", triggeredBy_, -1, startPoint_, 90) {
 }
 void MuleAction::finish(State &s) {
-    auto workers = s.getWorkers();
-    workers.erase(workers.find(worker));
+    s.getResources().at(triggeredBy).removeMule();
 }
 
 BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,

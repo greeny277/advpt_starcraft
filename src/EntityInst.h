@@ -57,6 +57,7 @@ class ResourceInst : public BuildingInst {
         const Resources miningRate;
         const int maxWorkerSlots;
         int activeWorkerSlots;
+        int activeMuleSlots;
     public:
         explicit ResourceInst(const BuildingBP *building);
         Resources mine();
@@ -64,7 +65,10 @@ class ResourceInst : public BuildingInst {
         /** Add/remove worker from resource and return true if
          * it was successful**/
         bool addWorker();
-        bool removeWorker();
+        void removeWorker();
+
+        bool addMule();
+        void removeMule();
 
         int getActiveWorkerCount() const;
         int getFreeWorkerCount() const;
@@ -73,6 +77,7 @@ class ResourceInst : public BuildingInst {
         void copyRemaingResources(ResourceInst &other);
         ~ResourceInst() override = default;
 };
+
 class WorkerInst : public UnitInst {
     private:
         int workingResource;
@@ -87,11 +92,4 @@ class WorkerInst : public UnitInst {
         bool isBusy() const override;
         bool isMiningMinerals(State&) const;
         bool isMiningGas(State&) const;
-        virtual ~WorkerInst() override = default;
-};
-
-class MuleInst : public WorkerInst {
-    public:
-        explicit inline MuleInst(const UnitBP *unit) : WorkerInst(unit) {}
-        ~MuleInst() override = default;
 };

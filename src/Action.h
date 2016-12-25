@@ -29,9 +29,9 @@ class Action {
 class AbilityAction : public Action {
     private:
         const char *name;
-        int triggeredBy;
         int targetBuilding; // optional
     protected:
+        int triggeredBy;
         AbilityAction(const char *name_,
             const int triggeredBy_,
             const int targetBuilding_,
@@ -44,11 +44,8 @@ class AbilityAction : public Action {
         nlohmann::json printEndJSON() override;
 };
 class MuleAction : public AbilityAction {
-    private:
-        int worker;
-
     public:
-        MuleAction(int startPoint_, int triggeredBy_, int worker);
+        MuleAction(int startPoint_, int triggeredBy_);
         void finish(State &s) override;
 };
 

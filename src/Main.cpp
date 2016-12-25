@@ -154,9 +154,10 @@ static bool checkAndRunAbilities(State &s) {
     s.iterEntities([&](EntityInst& e) {
         for (const Ability *ab : e.getBlueprint()->getAbilities()) {
             if (e.getCurrentEnergy() >= ab->energyCosts && !result) {
-                ab->create(s, e.getID());
-                e.removeEnergy(ab->energyCosts);
-                result = true;
+                if (ab->create(s, e.getID())) {
+                    e.removeEnergy(ab->energyCosts);
+                    result = true;
+                }
             }
         }
     });
@@ -185,6 +186,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
     });
 
     // TODO requirement vespin units can only be build if vespinInst exists
+    // TODO: there are only two vespene geysers per base
     for(auto bp : initialUnits) {
         if(bp->getRace() != race) {
             std::cerr << "entities to be build do not belong to one race" << std::endl;

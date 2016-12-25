@@ -130,11 +130,12 @@ ResourceInst::ResourceInst(const BuildingBP *building) :
     remaining(building->startResources),
     miningRate(building->startResources.getGas() > 0 ? Resources(35, 0, 100) : Resources(0, 7, 10)),
     maxWorkerSlots(building->startResources.getGas() > 0 ? 3 : 16),
-    activeWorkerSlots(0) {
+    activeWorkerSlots(0),
+    activeMuleSlots(0) {
 }
 
 Resources ResourceInst::mine() {
-    Resources out = miningRate * activeWorkerSlots;
+    Resources out = miningRate * (activeWorkerSlots + 4 * activeMuleSlots);
     if (out.getMinerals() > remaining.getMinerals())
         out.setMinerals(remaining.getMinerals());
     if (out.getGas() > remaining.getGas())
@@ -147,22 +148,27 @@ Resources ResourceInst::getRemainingResources() const {
     return remaining;
 }
 
-bool ResourceInst::addWorker(){
+bool ResourceInst::addWorker() {
     if(activeWorkerSlots == maxWorkerSlots){
         return false;
-    } else {
-        activeWorkerSlots++;
     }
+    activeWorkerSlots++;
     return true;
 }
 
-bool ResourceInst::removeWorker(){
-    if(activeWorkerSlots == 0){
+void ResourceInst::removeWorker(){
+    assert(activeWorkerSlots > 0);
+    activeWorkerSlots--;
+}
+bool ResourceInst::addMule() {
+    if (activeMuleSlots + 1 >= maxWorkerSlots / 2)
         return false;
-    } else {
-        activeWorkerSlots--;
-    }
+    activeMuleSlots++;
     return true;
+}
+void ResourceInst::removeMule() {
+    assert(activeMuleSlots > 0);
+    activeMuleSlots--;
 }
 
 int ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
