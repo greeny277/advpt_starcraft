@@ -7,9 +7,7 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
     unitMap{},
     resourceMap{},
     time(0),
-    currentSupply(0),
     resources{0, 50},
-    currentMaxSupply(0),
     muleActions{},
     buildActions{},
     blueprints(blueprints_),
@@ -137,4 +135,33 @@ EntityInst *State::getEntity(int id) {
     if (rent != resourceMap.end())
         return &rent->second;
     return nullptr;
+}
+int State::computeUsedSupply() const {
+    int supply = 0;
+    // compute supply of existing units (skip morphing units)
+    iterEntities([&](const EntityInst &e) {
+        if (!e.isMorphing()) {
+            if (auto bp = dynamic_cast<const UnitBP*>(e.getBlueprint())) {
+                supply += bp->getSupplyCost();
+            }
+        }
+    });
+    // compute supply of units that are getting built right now
+    for (const auto &action : buildActions) {
+        if (action.hasFinished()) // skip finished actions to avoid double counting
+            continue;
+
+        if (auto bp = dynamic_cast<const UnitBP*>(action.getBlueprint())) {
+            supply += bp->getSupplyCost();
+        }
+    }
+
+    return supply;
+}
+int State::computeMaxSupply() const {
+    int supply = 0;
+    iterEntities([&](const EntityInst &e) {
+        supply += e.getBlueprint()->getSupplyProvided();
+    });
+    return supply;
 }

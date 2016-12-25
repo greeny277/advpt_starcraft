@@ -56,7 +56,7 @@ UnitBP::UnitBP(std::string data[15]) :
     supplyCost(std::stoi(data[4])),
     isWorker(std::stoi(data[12])==1) {
 }
-int UnitBP::getSupplyCost() { return supplyCost; }
+int UnitBP::getSupplyCost() const { return supplyCost; }
 int UnitBP::newInstance(State &state) const {
     int id;
 

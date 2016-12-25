@@ -92,8 +92,8 @@ static nlohmann::json printJSON(State &curState) {
     message["time"] = curState.time;
     message["status"]["resources"]["minerals"] = curState.resources.getMinerals();
     message["status"]["resources"]["vespene"] = curState.resources.getGas();
-    message["status"]["resources"]["supply"] = curState.currentMaxSupply;
-    message["status"]["resources"]["supply-used"] = curState.currentSupply;
+    message["status"]["resources"]["supply"] = curState.computeMaxSupply();
+    message["status"]["resources"]["supply-used"] = curState.computeUsedSupply();
 
     int mineralWorkers = 0;
     int gasWorkers = 0;
@@ -375,7 +375,6 @@ int main(int argc, char *argv[]) {
                 valid = false;
                 //j["buildListValid"] = "0";
                 // TODO: activate this
-                j.erase(j.find("messages"));
                 valid = false;
             } else {
                 j["messages"] = messages;

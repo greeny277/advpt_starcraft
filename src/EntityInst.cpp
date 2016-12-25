@@ -13,7 +13,7 @@ bool EntityInst::isBusy() const {
     return morphing;
 }
 
-bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
+bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s, const UnitBP *morphedFrom) {
     // check free slots
     if(isBusy()) {
         return false;
@@ -45,7 +45,15 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s) {
     if(!foundRequirement && !requirementNames.empty())
         return false;
 
-    // TODO: supply
+    if (auto unit = dynamic_cast<UnitBP *>(entity)) {
+        int supplyUsed = s.computeUsedSupply();
+        supplyUsed += unit->getSupplyCost();
+        if (morphedFrom != nullptr) {
+            supplyUsed -= morphedFrom->getSupplyCost();
+        }
+        if (supplyUsed > s.computeMaxSupply())
+            return false;
+    }
 
     return true;
 }
@@ -57,7 +65,7 @@ void EntityInst::setMorphing(bool b){
     morphing =  b;
 }
 bool EntityInst::startMorphing(EntityBP *entity, State &s) {
-    if (!checkBuildRequirements(entity, s) || !canMorph()) {
+    if (!checkBuildRequirements(entity, s, dynamic_cast<const UnitBP*>(getBlueprint())) || !canMorph()) {
         return false;
     }
     bool foundBp = false;
@@ -69,6 +77,7 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
         return false;
 
     s.buildActions.push_back(BuildEntityAction(entity, -1, getID(), s));
+    morphing = true;
     return true;
 }
 
@@ -111,7 +120,7 @@ bool BuildingInst::canMorph() const {
  *
  *  **/
 bool BuildingInst::produceUnit(UnitBP *entity, State &s) {
-    if (!checkBuildRequirements(entity, s) || !entity->getMorphedFrom().empty()) {
+    if (!checkBuildRequirements(entity, s, nullptr) || !entity->getMorphedFrom().empty()) {
         return false;
     }
 
@@ -161,12 +170,14 @@ void ResourceInst::removeWorker(){
     activeWorkerSlots--;
 }
 bool ResourceInst::addMule() {
+    assert(isMinerals());
     if (activeMuleSlots + 1 >= maxWorkerSlots / 2)
         return false;
     activeMuleSlots++;
     return true;
 }
 void ResourceInst::removeMule() {
+    assert(isMinerals());
     assert(activeMuleSlots > 0);
     activeMuleSlots--;
 }
@@ -177,9 +188,18 @@ int ResourceInst::getFreeWorkerCount() const { return maxWorkerSlots - activeWor
 bool ResourceInst::isGas() const { return (miningRate * 1000).getGas() > 0; }
 
 bool ResourceInst::isMinerals() const { return (miningRate * 1000).getMinerals() > 0; }
-void ResourceInst::copyRemaingResources(ResourceInst &other) {
+void ResourceInst::copyRemaingResources(ResourceInst &other, State &s) {
     remaining = other.remaining;
-    activeWorkerSlots = other.activeWorkerSlots;
+    activeMuleSlots = other.activeMuleSlots;
+    int workers = other.activeWorkerSlots;
+    for (auto &w : s.getWorkers()) {
+        if (w.second.isAssignedTo(other.getID())) {
+            w.second.stopMining(s);
+            w.second.assignToResource(*this, s);
+        }
+    }
+    assert(activeWorkerSlots == workers);
+    assert(other.activeWorkerSlots == 0);
 }
 
 WorkerInst::WorkerInst(const UnitBP *unit) :
@@ -204,7 +224,7 @@ bool WorkerInst::startBuilding(BuildingBP *bbp, State &s) {
     }
 
     stopMining(s);
-    if (!checkBuildRequirements(bbp, s) || !bbp->getMorphedFrom().empty()) {
+    if (!checkBuildRequirements(bbp, s, nullptr) || !bbp->getMorphedFrom().empty()) {
         return false;
     }
     isBuilding = true;
@@ -227,4 +247,8 @@ bool WorkerInst::isMiningMinerals(State &s) const {
         return false;
 
     return s.getResources().at(workingResource).isMinerals();
+}
+
+bool WorkerInst::isAssignedTo(int id) const {
+    return id == workingResource;
 }

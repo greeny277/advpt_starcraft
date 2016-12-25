@@ -19,9 +19,7 @@ private:
     std::unordered_map<int,ResourceInst> resourceMap;
 public:
     int time;
-    int currentSupply;
     Resources resources;
-    int currentMaxSupply;
     std::vector<MuleAction> muleActions;
     std::vector<BuildEntityAction> buildActions;
     const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints;
@@ -46,4 +44,7 @@ public:
     void iterEntities(std::function<void(const EntityInst&)>) const;
     void eraseEntity(int id);
     EntityInst *getEntity(int id);
+
+    int computeUsedSupply() const;
+    int computeMaxSupply() const;
 };

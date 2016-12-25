@@ -55,11 +55,14 @@ class BuildEntityAction : public Action {
         int worker;
         std::vector<int> produced;
         int producedBy;
+        bool wasFinished;
 
     public:
         BuildEntityAction(EntityBP *blueprint_ , int worker_, int producedBy, State &s);
         nlohmann::json printStartJSON() override;
         nlohmann::json printEndJSON() override;
         void finish(State &s) override;
+        inline bool hasFinished() const { return wasFinished; }
+        inline EntityBP *getBlueprint() const { return blueprint; }
 };
 

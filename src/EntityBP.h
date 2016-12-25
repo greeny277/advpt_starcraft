@@ -17,7 +17,7 @@ class EntityBP {
         const int startEnergy;
         const int maxEnergy;
         const Resources costs;
-        const int buildTime; // TODO: buildTime=0 means the entity cannot be built (in a normal way)
+        const int buildTime;
         const std::vector<Ability*> abilities;
         const std::vector<std::string> requireOneOf; // we need one of the listed entities
         const std::vector<std::string> producedByOneOf; // second required entity
@@ -49,7 +49,7 @@ class UnitBP : public EntityBP {
 
     public:
         explicit UnitBP(std::string data[15]);
-        int getSupplyCost();
+        int getSupplyCost() const;
         int newInstance(State&) const override;
 };
 

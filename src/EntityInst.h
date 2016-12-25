@@ -16,7 +16,7 @@ class EntityInst {
         const int id;
         static int next_id;
     protected:
-        bool checkBuildRequirements(EntityBP*, State&);
+        bool checkBuildRequirements(EntityBP*, State&, const UnitBP *);
         ~EntityInst() = default;
     public:
         virtual bool isBusy() const;
@@ -74,7 +74,7 @@ class ResourceInst : public BuildingInst {
         int getFreeWorkerCount() const;
         bool isGas() const;
         bool isMinerals() const;
-        void copyRemaingResources(ResourceInst &other);
+        void copyRemaingResources(ResourceInst &other, State &s);
         ~ResourceInst() override = default;
 };
 
@@ -92,4 +92,5 @@ class WorkerInst : public UnitInst {
         bool isBusy() const override;
         bool isMiningMinerals(State&) const;
         bool isMiningGas(State&) const;
+        bool isAssignedTo(int id) const;
 };

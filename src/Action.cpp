@@ -57,13 +57,11 @@ BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
     blueprint(blueprint_),
     worker(worker_),
     produced{},
-    producedBy(producedBy_) {
+    producedBy(producedBy_),
+    wasFinished(false) {
 
     // change state
     s.resources -= blueprint->getCosts();
-
-    // TODO: suppply neu berechnen
-
 }
 
 nlohmann::json BuildEntityAction::printStartJSON() {
@@ -94,22 +92,23 @@ nlohmann::json BuildEntityAction::printEndJSON() {
 }
 
 void BuildEntityAction::finish(State &s) {
+    wasFinished = true;
+
     int id = blueprint->newInstance(s);
     produced.push_back(id); // remember ID for JSON output
 
     // stop worker to build
     if(worker != -1){
-        s.getWorkers().at(worker).stopBuilding();
+        s.getWorkers().at(worker).stopBuilding(); // TODO: protoss can go back to mining immediately
     }
     if(producedBy != -1){
         EntityInst *producer = s.getEntity(producedBy);
 
         if (producer->isMorphing()) {
-            s.eraseEntity(producedBy);
-
             if(auto resource = dynamic_cast<ResourceInst*>(producer)) {
-                s.getResources().at(id).copyRemaingResources(*resource);
+                s.getResources().at(id).copyRemaingResources(*resource, s);
             }
+            s.eraseEntity(producedBy);
         } else if (auto building = dynamic_cast<BuildingInst*>(producer)) {
             building->incFreeBuildSlots();
         }
