@@ -4,13 +4,14 @@
 #include "Ability.h"
 #include "EntityInst.h"
 #include <sstream>
-static std::vector<std::string> parseRequirements(const std::string &requirements) {
-    std::vector<std::string> requireOneOf;
+
+static std::unordered_set<std::string> parseRequirements(const std::string &requirements) {
+    std::unordered_set<std::string> requireOneOf;
     std::stringstream requirementStream(requirements);
     std::string req;
     while (std::getline(requirementStream, req, '/')) {
         if (!req.empty()) {
-            requireOneOf.push_back(req);
+            requireOneOf.insert(req);
         }
     }
     return requireOneOf;
@@ -35,7 +36,7 @@ EntityBP::EntityBP(std::string data[15]) :
     abilities(createAbilities(name)),
     requireOneOf(parseRequirements(data[11])),
     producedByOneOf(parseRequirements(data[10])),
-    morphedFrom(data[9].empty() ? std::vector<std::string>{} : std::vector<std::string>{data[9]}),
+    morphedFrom(data[9].empty() ? std::unordered_set<std::string>{} : std::unordered_set<std::string>{data[9]}),
     supplyProvided(std::stoi(data[5])) {
 }
 
@@ -46,9 +47,9 @@ int EntityBP::getMaxEnergy() const { return maxEnergy; }
 Resources EntityBP::getCosts() const { return costs; }
 int EntityBP::getBuildTime() const { return buildTime; }
 const std::vector<Ability*>& EntityBP::getAbilities() const { return abilities; }
-const std::vector<std::string>& EntityBP::getRequireOneOf() const { return requireOneOf; }
-const std::vector<std::string>& EntityBP::getProducedByOneOf() const { return producedByOneOf; }
-const std::vector<std::string>& EntityBP::getMorphedFrom() const { return morphedFrom; }
+const std::unordered_set<std::string>& EntityBP::getRequireOneOf() const { return requireOneOf; }
+const std::unordered_set<std::string>& EntityBP::getProducedByOneOf() const { return producedByOneOf; }
+const std::unordered_set<std::string>& EntityBP::getMorphedFrom() const { return morphedFrom; }
 int EntityBP::getSupplyProvided() const { return supplyProvided; }
 
 UnitBP::UnitBP(std::string data[15]) :

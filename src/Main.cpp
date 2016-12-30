@@ -14,6 +14,7 @@
 #include "State.h"
 #include "Action.h"
 #include "Ability.h"
+#include "Helper.h"
 
 std::unordered_map<std::string, std::unique_ptr<EntityBP>> readConfig() {
     std::unordered_map<std::string, std::unique_ptr<EntityBP>> res;
@@ -164,29 +165,17 @@ static bool checkAndRunAbilities(State &s) {
     return result;
 }
 
-static bool buildOrderCheckOneOf(std::vector<std::string> &oneOf, std::vector<std::string> &dependencies) {
-
-        if(!oneOf.empty()) {
-            for(auto req: oneOf) {
-                if ( std::find(dependencies.begin(), dependencies.end(), req) != dependencies.end() ) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        return true;
-
-}
 
 static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints ) {
     State s(race, blueprints);
-    std::vector<std::string> dependencies;
+    std::unordered_multiset<std::string> dependencies;
     s.iterEntities([&](const EntityInst &ent) {
-        dependencies.push_back(ent.getBlueprint()->getName());
+        dependencies.insert(ent.getBlueprint()->getName());
     });
 
     // TODO requirement vespin units can only be build if vespinInst exists
     // TODO: there are only two vespene geysers per base
+    // TODO: supply
     for(auto bp : initialUnits) {
         if(bp->getRace() != race) {
             std::cerr << "entities to be build do not belong to one race" << std::endl;
@@ -195,17 +184,23 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         // check if the building has all the required dependencies
         auto requireOneOf = bp->getRequireOneOf();
         bool valid = buildOrderCheckOneOf(requireOneOf, dependencies);
-        if(!valid){return false;}
-        
+        if(!valid){
+            std::cerr << bp->getName() << " cannot be built because of a missing requirement." << std::endl;
+            return false;
+        }
+
         // check if the required building for the to be produced unit exists
         auto producedByOneOf = bp->getProducedByOneOf();
         valid = buildOrderCheckOneOf(producedByOneOf, dependencies);
-        if(!valid){return false;}
-        
+        if(!valid){
+            std::cerr << bp->getName() << " cannot be built because there is no building/worker to produce it." << std::endl;
+            return false;
+        }
+
         for(const std::string &req : bp->getMorphedFrom()) {
-            auto position =  std::find(dependencies.begin(), dependencies.end(), req);
+            auto position =  dependencies.find(req);
             if (position == dependencies.end()) {
-                std::cerr << "entity:" << bp->getName() << " cannot be upgraded, not exist yet: " << req << std::endl;
+                std::cerr << "entity:" << bp->getName() << " cannot be upgraded, " << req << " does not exist yet." << std::endl;
                 return false;
             } else {
                 dependencies.erase(position);
@@ -213,7 +208,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
             }
         }
 
-        dependencies.push_back(bp->getName());
+        dependencies.insert(bp->getName());
     }
     return true;
 }

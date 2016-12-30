@@ -4,8 +4,8 @@
 
 #include "Action.h"
 #include "State.h"
+#include "Helper.h"
 
-#include<set>
 
 int EntityInst::next_id = 0;
 
@@ -25,26 +25,18 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s, const UnitBP
     }
     // check if this building can produce the unit. Therefore get list of buildings which
     // can produce the entity and check if this building is one of them
-    const std::vector<std::string> &buildingNames = entity->getProducedByOneOf();
-    auto it = std::find(std::begin(buildingNames), std::end(buildingNames), getBlueprint()->getName());
-    if(!buildingNames.empty() && it == std::end(buildingNames)){
+    const auto &buildingNames = entity->getProducedByOneOf();
+    if (!buildingNames.empty() && buildingNames.find(getBlueprint()->getName()) == buildingNames.end()) {
         // this building can not produce the unit
         return false;
     }
 
     // check requirements
-    const std::vector<std::string> &requirementNames = entity->getRequireOneOf();
-    bool foundRequirement = false;
-    for (auto &req : requirementNames) {
-        auto iterProduced = std::find(std::begin(s.alreadyProduced), std::end(s.alreadyProduced), req);
-        if(iterProduced != std::end(s.alreadyProduced)){
-            foundRequirement = true;
-            break;
-        }
-    }
-    if(!foundRequirement && !requirementNames.empty())
+    if (!buildOrderCheckOneOf(entity->getRequireOneOf(), s.alreadyProduced)) {
         return false;
+    }
 
+    // check supply
     if (auto unit = dynamic_cast<UnitBP *>(entity)) {
         int supplyUsed = s.computeUsedSupply();
         supplyUsed += unit->getSupplyCost();
