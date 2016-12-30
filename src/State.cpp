@@ -13,27 +13,15 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
     blueprints(blueprints_),
     alreadyProduced{} {
 
+        const char *workerName = nullptr;
         if(race == "protoss") {
-            auto probe = static_cast<const UnitBP*>(blueprints.at("probe").get());
-            for (size_t i = 0; i < 6; i++) {
-                probe->newInstance(*this);
-            }
+            workerName = "probe";
             blueprints.at("nexus").get()->newInstance(*this);
-        }
-
-        if(race == "terran") {
-            auto scv = static_cast<const UnitBP*>(blueprints.at("scv").get());
-            for (size_t i = 0; i < 6; i++) {
-                scv->newInstance(*this);
-            }
+        } else if(race == "terran") {
+            workerName = "scv";
             blueprints.at("command_center")->newInstance(*this);
-        }
-
-        if (race == "zerg") {
-            auto drone = static_cast<const UnitBP*>(blueprints.at("drone").get());
-            for (size_t i = 0; i < 6; i++) {
-                drone->newInstance(*this);
-            }
+        } else if (race == "zerg") {
+            workerName = "drone";
             blueprints.at("hatchery").get()->newInstance(*this);
 
             auto larva = static_cast<const UnitBP*>(blueprints.at("larva").get());
@@ -41,6 +29,12 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
                 larva->newInstance(*this);
             }
             blueprints.at("overlord")->newInstance(*this);
+        } else {
+            assert(false);
+        }
+        const UnitBP *worker = static_cast<const UnitBP*>(blueprints.at(workerName).get());
+        for (size_t i = 0; i < 6; i++) {
+            worker->newInstance(*this);
         }
 }
 nlohmann::json State::getUnitJSON(){
@@ -116,6 +110,7 @@ void State::addResourceInst(ResourceInst e) {
     resourceMap.insert({e.getID(), e});
 }
 void State::eraseEntity(int id) {
+    alreadyProduced.erase(alreadyProduced.find(getEntity(id)->getBlueprint()->getName()));
     buildingMap.erase(id);
     workerMap.erase(id);
     unitMap.erase(id);

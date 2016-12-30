@@ -23,7 +23,7 @@ public:
     std::vector<MuleAction> muleActions;
     std::vector<BuildEntityAction> buildActions;
     const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints;
-    std::set<std::string> alreadyProduced; // Keeps track of entities which were produced once at least
+    std::unordered_multiset<std::string> alreadyProduced; // Keeps track of currently existing entities by name
 
 public:
     State(const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints);

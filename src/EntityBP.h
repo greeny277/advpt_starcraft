@@ -4,6 +4,7 @@
 #include "Resources.h"
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 class Ability;
 class EntityInst;
@@ -19,9 +20,9 @@ class EntityBP {
         const Resources costs;
         const int buildTime;
         const std::vector<Ability*> abilities;
-        const std::vector<std::string> requireOneOf; // we need one of the listed entities
-        const std::vector<std::string> producedByOneOf; // second required entity
-        const std::vector<std::string> morphedFrom; // third required entity. This entity is gone once this was built.
+        const std::unordered_set<std::string> requireOneOf; // we need one of the listed entities
+        const std::unordered_set<std::string> producedByOneOf; // second required entity
+        const std::unordered_set<std::string> morphedFrom; // third required entity. This entity is gone once this was built.
         const int supplyProvided;
 
         explicit EntityBP(std::string data[15]);
@@ -34,9 +35,9 @@ class EntityBP {
         Resources getCosts() const;
         int getBuildTime() const;
         const std::vector<Ability*>& getAbilities() const;
-        const std::vector<std::string>& getRequireOneOf() const;
-        const std::vector<std::string>& getProducedByOneOf() const;
-        const std::vector<std::string>& getMorphedFrom() const;
+        const std::unordered_set<std::string>& getRequireOneOf() const;
+        const std::unordered_set<std::string>& getProducedByOneOf() const;
+        const std::unordered_set<std::string>& getMorphedFrom() const;
         int getSupplyProvided() const;
         virtual int newInstance(State&) const = 0;
         virtual ~EntityBP() = default;
