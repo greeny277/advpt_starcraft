@@ -21,7 +21,7 @@ class Action {
         void tick();
         bool isReady() const;
         virtual nlohmann::json printStartJSON() = 0;
-        virtual nlohmann::json printEndJSON() = 0;
+        virtual void printEndJSON(nlohmann::json&) = 0;
         virtual void finish(State &) = 0;
         int getStartPoint() const;
 };
@@ -41,7 +41,7 @@ class AbilityAction : public Action {
 
     public:
         nlohmann::json printStartJSON() override;
-        nlohmann::json printEndJSON() override;
+        void printEndJSON(nlohmann::json&) override;
 };
 class MuleAction : public AbilityAction {
     public:
@@ -60,7 +60,7 @@ class BuildEntityAction : public Action {
     public:
         BuildEntityAction(EntityBP *blueprint_ , int worker_, int producedBy, State &s);
         nlohmann::json printStartJSON() override;
-        nlohmann::json printEndJSON() override;
+        void printEndJSON(nlohmann::json&) override;
         void finish(State &s) override;
         inline bool hasFinished() const { return wasFinished; }
         inline EntityBP *getBlueprint() const { return blueprint; }

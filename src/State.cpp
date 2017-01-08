@@ -164,3 +164,26 @@ int State::computeMaxSupply() const {
     });
     return supply;
 }
+
+void State::moveEntity(int old_id, int new_id) {
+    auto bent = buildingMap.find(old_id);
+    if (bent != buildingMap.end()) {
+        buildingMap.insert({new_id, bent->second}).first->second.setID(new_id);
+        buildingMap.erase(bent);
+    }
+    auto went = workerMap.find(old_id);
+    if (went != workerMap.end()) {
+        workerMap.insert({new_id, went->second}).first->second.setID(new_id);
+        workerMap.erase(went);
+    }
+    auto uent = unitMap.find(old_id);
+    if (uent != unitMap.end()) {
+        unitMap.insert({new_id, uent->second}).first->second.setID(new_id);
+        unitMap.erase(uent);
+    }
+    auto rent = resourceMap.find(old_id);
+    if (rent != resourceMap.end()) {
+        resourceMap.insert({new_id, rent->second}).first->second.setID(new_id);
+        resourceMap.erase(rent);
+    }
+}

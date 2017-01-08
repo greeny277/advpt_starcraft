@@ -44,6 +44,7 @@ public:
     void iterEntities(std::function<void(const EntityInst&)>) const;
     void eraseEntity(int id);
     EntityInst *getEntity(int id);
+    void moveEntity(int old_id, int new_id);
 
     int computeUsedSupply() const;
     int computeMaxSupply() const;

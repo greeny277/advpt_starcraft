@@ -13,7 +13,7 @@ class EntityInst {
         const EntityBP *blueprint;
         int currentMicroEnergy;
         bool morphing; // when the unit is currently upgrading, the entity cannot do anything else
-        const int id;
+        int id;
         static int next_id;
     protected:
         bool checkBuildRequirements(EntityBP*, State&, const UnitBP *);
@@ -26,6 +26,7 @@ class EntityInst {
         explicit EntityInst(const EntityBP *bp);
         const EntityBP *getBlueprint() const;
         int getID() const;
+        void setID(int);
         inline int getCurrentEnergy() const { return currentMicroEnergy / 1000000; }
         inline void removeEnergy(int howMuch) { currentMicroEnergy -= howMuch * 1000000; }
         inline void restoreEnergy() { currentMicroEnergy = std::min(blueprint->getMaxEnergy() * 1000000, currentMicroEnergy + 562500); }
@@ -74,7 +75,7 @@ class ResourceInst : public BuildingInst {
         int getFreeWorkerCount() const;
         bool isGas() const;
         bool isMinerals() const;
-        void copyRemaingResources(ResourceInst &other, State &s);
+        void copyRemainingResources(ResourceInst &other, State &s);
         ~ResourceInst() override = default;
 };
 

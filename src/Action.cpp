@@ -34,15 +34,13 @@ nlohmann::json AbilityAction::printStartJSON() {
     nlohmann::json j;
     j["type"] = "special";
     j["name"] = name;
-    j["triggeredBy"] = triggeredBy;
+    j["triggeredBy"] = std::to_string(triggeredBy);
     if (targetBuilding != -1) {
         j["targetBuilding"] = targetBuilding;
     }
     return j;
 }
-nlohmann::json AbilityAction::printEndJSON() {
-    nlohmann::json j;
-    return j;
+void AbilityAction::printEndJSON(nlohmann::json&) {
 }
 MuleAction::MuleAction(int startPoint_, int triggeredBy_) :
     AbilityAction("mule", triggeredBy_, -1, startPoint_, 90) {
@@ -75,45 +73,52 @@ nlohmann::json BuildEntityAction::printStartJSON() {
     }
     return j;
 }
-nlohmann::json BuildEntityAction::printEndJSON() {
+void BuildEntityAction::printEndJSON(nlohmann::json& events) {
     nlohmann::json j;
     j["type"] = "build-end";
     j["name"] = blueprint->getName();
     if (worker != -1) {
-        j["producerID"] = worker;
+        j["producerID"] = std::to_string(worker);
     } else if (producedBy != -1){
-        j["producerID"] = producedBy;
+        j["producerID"] = std::to_string(producedBy);
     }
     j["producedIDs"] = nlohmann::json::array();
     for (const auto ent : produced) {
-        j["producedIDs"].push_back(ent);
+        j["producedIDs"].push_back(std::to_string(ent));
     }
-    return j;
+    events.push_back(j);
 }
 
 void BuildEntityAction::finish(State &s) {
     assert(!wasFinished);
     wasFinished = true;
 
+    EntityInst *producer = producedBy == -1 ? nullptr : s.getEntity(producedBy);
+    bool morphed = producer != nullptr && producer->isMorphing();
+
     int id = blueprint->newInstance(s);
-    produced.push_back(id); // remember ID for JSON output
 
     // stop worker to build
     if(worker != -1){
         s.getWorkers().at(worker).stopBuilding(); // TODO: protoss can go back to mining immediately
     }
     if(producedBy != -1){
-        EntityInst *producer = s.getEntity(producedBy);
-
         if (producer->isMorphing()) {
             if(auto resource = dynamic_cast<ResourceInst*>(producer)) {
-                s.getResources().at(id).copyRemaingResources(*resource, s);
+                s.getResources().at(id).copyRemainingResources(*resource, s);
             }
             s.eraseEntity(producedBy);
         } else if (auto building = dynamic_cast<BuildingInst*>(producer)) {
             building->incFreeBuildSlots();
         }
     }
+
+    if (morphed) {
+        s.moveEntity(id, producedBy);
+        id = producedBy;
+    }
+    produced.push_back(id); // remember ID for JSON output
+
     // TODO: check if building produces two or one unit at the same time
     return;
 }

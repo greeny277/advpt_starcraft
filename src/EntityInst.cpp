@@ -84,6 +84,7 @@ const EntityBP* EntityInst::getBlueprint() const { return blueprint; }
 bool EntityInst::canMorph() const { return !isBusy(); }
 
 int EntityInst::getID() const { return id; }
+void EntityInst::setID(int id_) { id = id_; }
 
 bool UnitInst::isBusy() const { return false; }
 
@@ -180,18 +181,12 @@ int ResourceInst::getFreeWorkerCount() const { return maxWorkerSlots - activeWor
 bool ResourceInst::isGas() const { return (miningRate * 1000).getGas() > 0; }
 
 bool ResourceInst::isMinerals() const { return (miningRate * 1000).getMinerals() > 0; }
-void ResourceInst::copyRemaingResources(ResourceInst &other, State &s) {
+void ResourceInst::copyRemainingResources(ResourceInst &other, State &s) {
     remaining = other.remaining;
     activeMuleSlots = other.activeMuleSlots;
     int workers = other.activeWorkerSlots;
-    for (auto &w : s.getWorkers()) {
-        if (w.second.isAssignedTo(other.getID())) {
-            w.second.stopMining(s);
-            w.second.assignToResource(*this, s);
-        }
-    }
-    assert(activeWorkerSlots == workers);
-    assert(other.activeWorkerSlots == 0);
+    activeWorkerSlots = workers;
+    other.activeWorkerSlots = 0;
 }
 
 WorkerInst::WorkerInst(const UnitBP *unit) :

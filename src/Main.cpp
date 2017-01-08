@@ -76,7 +76,7 @@ template<typename T>
 static void actionsToJSON(std::vector<T>& actions, nlohmann::json& events, int timestamp) {
     for(auto action = actions.begin(); action != actions.end(); ){
         if (action->isReady()) {
-            events.push_back(action->printEndJSON());
+            action->printEndJSON(events);
             std::swap(*action, actions.back());
             actions.pop_back();
         } else if (action->getStartPoint() == timestamp) {
