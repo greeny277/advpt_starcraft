@@ -14,15 +14,17 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
     alreadyProduced{} {
 
         const char *workerName = nullptr;
+        int mainBuildingID;
+
         if(race == "protoss") {
             workerName = "probe";
-            blueprints.at("nexus").get()->newInstance(*this);
+            mainBuildingID = blueprints.at("nexus").get()->newInstance(*this);
         } else if(race == "terran") {
             workerName = "scv";
-            blueprints.at("command_center")->newInstance(*this);
+            mainBuildingID = blueprints.at("command_center")->newInstance(*this);
         } else if (race == "zerg") {
             workerName = "drone";
-            blueprints.at("hatchery").get()->newInstance(*this);
+            mainBuildingID = blueprints.at("hatchery").get()->newInstance(*this);
 
             auto larva = static_cast<const UnitBP*>(blueprints.at("larva").get());
             for (size_t i = 0; i < 3; i++) {
@@ -32,9 +34,11 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
         } else {
             assert(false);
         }
+        ResourceInst &mainBuilding = getResources().at(mainBuildingID);
         const UnitBP *worker = static_cast<const UnitBP*>(blueprints.at(workerName).get());
         for (size_t i = 0; i < 6; i++) {
-            worker->newInstance(*this);
+            int workerID = worker->newInstance(*this);
+            getWorkers().at(workerID).assignToResource(mainBuilding, *this);
         }
 }
 nlohmann::json State::getUnitJSON(){
@@ -45,7 +49,7 @@ nlohmann::json State::getUnitJSON(){
         if (units.find(name) == std::end(units)) {
             units[name] = nlohmann::json::array();
         }
-        units[name].push_back(inst.getID());
+        units[name].push_back(std::to_string(inst.getID()));
     });
     return units;
 }

@@ -69,9 +69,9 @@ nlohmann::json BuildEntityAction::printStartJSON() {
     j["type"] = "build-start";
     j["name"] = blueprint->getName();
     if (worker != -1) {
-        j["producerID"] = worker;
+        j["producerID"] = std::to_string(worker);
     } else if (producedBy != -1){
-        j["producerID"] = producedBy;
+        j["producerID"] = std::to_string(producedBy);
     }
     return j;
 }
@@ -92,6 +92,7 @@ nlohmann::json BuildEntityAction::printEndJSON() {
 }
 
 void BuildEntityAction::finish(State &s) {
+    assert(!wasFinished);
     wasFinished = true;
 
     int id = blueprint->newInstance(s);

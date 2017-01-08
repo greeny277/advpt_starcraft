@@ -55,6 +55,7 @@ std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, std::
     while(std::getline(input, line)) {
         auto itEntBP = blueprints.find(line);
         if(itEntBP == blueprints.end()){
+            std::cerr << line << " is not a known entity." << std::endl;
             return {};
         }
         bps.push_back(itEntBP->second.get());
@@ -88,7 +89,28 @@ static void actionsToJSON(std::vector<T>& actions, nlohmann::json& events, int t
 
 }
 
-static nlohmann::json printJSON(State &curState) {
+static void printJSON(State &curState, nlohmann::json &messages) {
+    static int lastMineralWorkers, lastGasWorkers;
+    auto events = nlohmann::json::array();
+    actionsToJSON(curState.buildActions, events, curState.time);
+    actionsToJSON(curState.muleActions, events, curState.time);
+    int mineralWorkers = 0;
+    int gasWorkers = 0;
+    curState.iterEntities([&](EntityInst& entity) {
+            auto res = dynamic_cast<const ResourceInst*>(&entity);
+            if (res != nullptr) {
+                if (res->isMinerals())
+                    mineralWorkers += res->getActiveWorkerCount();
+                if (res->isGas())
+                    gasWorkers += res->getActiveWorkerCount();
+            }
+        });
+    if (events.size() == 0 && mineralWorkers == lastMineralWorkers && gasWorkers == lastGasWorkers) {
+        return;
+    }
+    lastMineralWorkers = mineralWorkers;
+    lastGasWorkers = gasWorkers;
+
     nlohmann::json message;
     message["time"] = curState.time;
     message["status"]["resources"]["minerals"] = curState.resources.getMinerals();
@@ -96,24 +118,10 @@ static nlohmann::json printJSON(State &curState) {
     message["status"]["resources"]["supply"] = curState.computeMaxSupply();
     message["status"]["resources"]["supply-used"] = curState.computeUsedSupply();
 
-    int mineralWorkers = 0;
-    int gasWorkers = 0;
-    curState.iterEntities([&](EntityInst& entity) {
-            auto res = dynamic_cast<const ResourceInst*>(&entity);
-            if (res != nullptr) {
-            if (res->isMinerals())
-            mineralWorkers += res->getActiveWorkerCount();
-            if (res->isGas())
-            gasWorkers += res->getActiveWorkerCount();
-            }
-            });
     message["status"]["workers"]["minerals"] = mineralWorkers;
     message["status"]["workers"]["vespene"] = gasWorkers;
-    auto events = nlohmann::json::array();
-    actionsToJSON(curState.buildActions, events, curState.time);
-    actionsToJSON(curState.muleActions, events, curState.time);
     message["events"] = events;
-    return message;
+    messages.push_back(message);
 }
 static nlohmann::json getInitialJSON(const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints,
         const std::deque<EntityBP*> &initialUnits,
@@ -123,7 +131,7 @@ static nlohmann::json getInitialJSON(const std::unordered_map<std::string, std::
     std::string game("sc2-hots-");
     game.append(race);
     j["game"] = game;
-    j["buildListValid"] = valid ? "1" : "0"; // WTF? why strings when JSON has booleans?
+    j["buildlistValid"] = valid ? 1 : 0;
 
     for (const auto &bp : blueprints) {
         nlohmann::json positions = nlohmann::json::array();
@@ -290,7 +298,6 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         auto initialUnits = readBuildOrder(blueprints, argv[i]);
         if(initialUnits.empty()){
-            std::cerr << "The build order list contains unknown members" << std::endl;
             return EXIT_FAILURE;
         }
         std::string race(initialUnits.front()->getRace());
@@ -360,7 +367,7 @@ int main(int argc, char *argv[]) {
                     buildOrder.pop();
 
                 // timestep 5
-                messages.push_back(printJSON(curState));
+                printJSON(curState, messages);
 
                 stillBuilding = !curState.buildActions.empty();
             }
@@ -368,7 +375,7 @@ int main(int argc, char *argv[]) {
             if (!buildOrder.empty()) {
                 std::cerr << "Build order could not be finished." << std::endl;
                 valid = false;
-                //j["buildListValid"] = "0";
+                //j["buildlistValid"] = 0;
                 // TODO: activate this
                 valid = false;
             } else {
