@@ -13,3 +13,11 @@ bool MuleAbility::create(State &s, int triggeredBy) const {
     }
     return ok;
 }
+
+InjectAbility::InjectAbility() : Ability(25) {
+}
+
+bool InjectAbility::create(State &s, int triggeredBy) const {
+    /* Find a fitting hatchery with the biggest amount of larvae slots */
+    return false;
+}

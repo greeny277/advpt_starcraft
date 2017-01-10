@@ -82,11 +82,11 @@ BuildingBP::BuildingBP(std::string data[15]) :
 int BuildingBP::newInstance(State &state) const {
     int id;
     if (startResources.getGas() || startResources.getMinerals()) {
-        auto newResource = ResourceInst(this);
+        auto newResource = ResourceInst(this, state.time);
         id = newResource.getID();
         state.addResourceInst(newResource);
     } else {
-        auto newBuilding = BuildingInst(this);
+        auto newBuilding = BuildingInst(this,state.time);
         id = newBuilding.getID();
         state.addBuildingInst(newBuilding);
     }

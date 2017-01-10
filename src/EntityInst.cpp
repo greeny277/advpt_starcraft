@@ -92,10 +92,15 @@ UnitInst::UnitInst(const UnitBP *unit) :
     EntityInst(unit) {
 }
 
-BuildingInst::BuildingInst(const BuildingBP *building) :
+BuildingInst::BuildingInst(const BuildingBP *building, int buildTime_) :
     EntityInst(building),
     freeBuildSlots(building->getBuildSlots()),
+    buildTime(buildTime_),
     chronoBoostActivated(false) {
+}
+
+int BuildingInst::getBuildTime() const {
+    return buildTime;
 }
 
 bool BuildingInst::isBusy() const {
@@ -127,8 +132,8 @@ void BuildingInst::incFreeBuildSlots(){
     freeBuildSlots++;
 }
 
-ResourceInst::ResourceInst(const BuildingBP *building) :
-    BuildingInst(building),
+ResourceInst::ResourceInst(const BuildingBP *building, int buildTime_) :
+    BuildingInst(building, buildTime_),
     remaining(building->startResources),
     miningRate(building->startResources.getGas() > 0 ? Resources(35, 0, 100) : Resources(0, 7, 10)),
     maxWorkerSlots(building->startResources.getGas() > 0 ? 3 : 16),

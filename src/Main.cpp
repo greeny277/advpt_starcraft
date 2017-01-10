@@ -72,6 +72,39 @@ void resourceUpdate(State &state) {
     });
 }
 
+void larvaeUpdate(State &state) {
+    // Check current number of larvaes
+    int currentLarvaes = 0;
+    state.iterEntities([&](EntityInst& ent) {
+        if(ent.getBlueprint()->getName() == "larva"){
+            currentLarvaes++;
+        }
+    });
+    if(currentLarvaes >= 3){
+        return;
+    }
+    state.iterEntities([&](EntityInst& ent) {
+        if(currentLarvaes == 3){
+             return;
+
+        BuildingInst* build = dynamic_cast<BuildingInst*>(&ent);
+        if(build != nullptr){
+            auto name = build->getBlueprint()->getName();
+            auto larvaeProducer = {"hatchery","lair","hive"};
+            auto r = find(larvaeProducer.begin(), larvaeProducer.end(),name);
+            if (r != larvaeProducer.end()) {
+                if((state.time - build->getBuildTime()) % 15 == 0) {
+                    // Create new larva
+                    auto larva = static_cast<const UnitBP*>(state.blueprints.at("larva").get());
+                    larva->newInstance(state);
+                    currentLarvaes++;
+                    }
+                }
+            }
+        }
+    });
+}
+
 template<typename T>
 static void actionsToJSON(std::vector<T>& actions, nlohmann::json& events, int timestamp) {
     for(auto action = actions.begin(); action != actions.end(); ){
@@ -325,6 +358,8 @@ int main(int argc, char *argv[]) {
 
                 // timestep 1
                 resourceUpdate(curState);
+                if(race == "zerg"){
+                }
 
                 // timestep 2
                 checkActions(curState.buildActions, curState);

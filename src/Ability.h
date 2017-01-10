@@ -19,3 +19,9 @@ class MuleAbility : public Ability {
         MuleAbility();
         bool create(State &s, int triggeredBy) const override;
 };
+
+class InjectAbility : public Ability {
+    public:
+        InjectAbility();
+        bool create(State &s, int triggeredBy) const override;
+};
