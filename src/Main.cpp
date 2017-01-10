@@ -239,6 +239,10 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         }
 
         for(const std::string &req : bp->getMorphedFrom()) {
+            if( req == "larva" ) {
+                /* We have an endless amount of larvaes */
+                break;
+            }
             auto position =  dependencies.find(req);
             if (position == dependencies.end()) {
                 std::cerr << "entity:" << bp->getName() << " cannot be upgraded, " << req << " does not exist yet." << std::endl;
