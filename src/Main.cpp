@@ -86,8 +86,10 @@ void larvaeUpdate(State &state) {
     state.iterEntities([&](EntityInst& ent) {
         if(currentLarvaes == 3){
              return;
+        }
 
         BuildingInst* build = dynamic_cast<BuildingInst*>(&ent);
+
         if(build != nullptr){
             auto name = build->getBlueprint()->getName();
             auto larvaeProducer = {"hatchery","lair","hive"};
@@ -100,8 +102,8 @@ void larvaeUpdate(State &state) {
                     currentLarvaes++;
                     }
                 }
-            }
         }
+
     });
 }
 
@@ -363,6 +365,7 @@ int main(int argc, char *argv[]) {
                 // timestep 1
                 resourceUpdate(curState);
                 if(race == "zerg"){
+                    larvaeUpdate(curState);
                 }
 
                 // timestep 2
