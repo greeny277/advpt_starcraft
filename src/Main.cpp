@@ -216,8 +216,8 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
     });
 
     int vespInst = 0;
-    int currentSupply = 10; // 1 base = 10 supply
-    int neededSupply = 6; // six workers at begin
+    int currentSupply = s.computeMaxSupply(); // 1 base = 10 supply
+    int neededSupply = s.computeUsedSupply(); // six workers at begin
     for(auto bp : initialUnits) {
         if(bp->getRace() != race) {
             std::cerr << "entities to be build do not belong to one race" << std::endl;
