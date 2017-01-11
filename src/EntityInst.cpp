@@ -97,7 +97,7 @@ UnitInst::UnitInst(const UnitBP *unit) :
 
 BuildingInst::BuildingInst(const BuildingBP *building) :
     EntityInst(building),
-    freeBuildSlots(building->getBuildSlots()),
+    freeBuildSlots(building->getBuildSlots()){
 }
 
 

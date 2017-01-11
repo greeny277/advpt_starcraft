@@ -9,7 +9,7 @@ Action::Action(int startPoint_, int timeToFinish_) :
     startPoint(startPoint_),
     timeToFinish(timeToFinish_*10){
     }
-void Action::tick(State &s) {
+void Action::tick(State &) {
     timeToFinish -= 10;
 
 }
