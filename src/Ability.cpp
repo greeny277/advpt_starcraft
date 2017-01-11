@@ -21,3 +21,10 @@ bool InjectAbility::create(State &s, int triggeredBy) const {
     /* Find a fitting hatchery with the biggest amount of larvae slots */
     return false;
 }
+
+ChronoAbility::ChronoAbility() : Ability(25) {
+}
+bool ChronoAbility::create(State &s, int triggeredBy) const {
+    /* Find a fitting building to activate the chrono boost */
+    return false;
+}

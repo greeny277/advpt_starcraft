@@ -25,3 +25,8 @@ class InjectAbility : public Ability {
         InjectAbility();
         bool create(State &s, int triggeredBy) const override;
 };
+class ChronoAbility : public Ability {
+    public:
+        ChronoAbility();
+        bool create(State &s, int triggeredBy) const override;
+};

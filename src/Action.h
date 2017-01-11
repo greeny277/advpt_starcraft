@@ -48,6 +48,11 @@ class MuleAction : public AbilityAction {
         MuleAction(int startPoint_, int triggeredBy_);
         void finish(State &s) override;
 };
+class ChronoAction: public AbilityAction {
+    public:
+        ChronoAction(int startPoint_, int triggeredBy_, int targetBuilding_);
+        void finish(State &s) override;
+}
 
 class BuildEntityAction : public Action {
     private:

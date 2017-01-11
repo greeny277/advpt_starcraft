@@ -49,6 +49,13 @@ void MuleAction::finish(State &s) {
     s.getResources().at(triggeredBy).removeMule();
 }
 
+ChronoAction::ChronoAction(int startPoint_, int triggeredBy_, int targetBuilding_):
+    AbilityAction("chronoboost", triggeredBy_, targetBuilding , -1, 20) {
+}
+void ChronoAction::finish(State &s) {
+    // TODO
+}
+
 BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
         int producedBy_, State &s) :
     Action(s.time, blueprint_->getBuildTime()),
