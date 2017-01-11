@@ -42,7 +42,6 @@ class BuildingInst : public EntityInst {
     private:
         int buildTime; // necessary for hatcheries
         int freeBuildSlots;
-        bool chronoBoostActivated;
     public:
         explicit BuildingInst(const BuildingBP *building, int buildTime);
         bool isBusy() const override;
@@ -64,6 +63,7 @@ class ResourceInst : public BuildingInst {
         const int maxWorkerSlots;
         int activeWorkerSlots;
         int activeMuleSlots;
+        bool chronoBoostActivated;
     public:
         explicit ResourceInst(const BuildingBP *building, int buildTime);
         Resources mine();
@@ -85,6 +85,9 @@ class ResourceInst : public BuildingInst {
         bool canInject();
         void startInject();
         void stopInject();
+        void startChronoBoost();
+        void stopChronoBoost();
+        bool isChronoBoosted();
 
         int getActiveWorkerCount() const;
         int getFreeWorkerCount() const;

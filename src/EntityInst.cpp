@@ -98,8 +98,7 @@ UnitInst::UnitInst(const UnitBP *unit) :
 BuildingInst::BuildingInst(const BuildingBP *building, int buildTime_) :
     EntityInst(building),
     freeBuildSlots(building->getBuildSlots()),
-    buildTime(buildTime_),
-    chronoBoostActivated(false) {
+    buildTime(buildTime_) {
 }
 
 int BuildingInst::getBuildTime() const {
@@ -145,7 +144,8 @@ ResourceInst::ResourceInst(const BuildingBP *building, int buildTime_) :
     miningRate(building->startResources.getGas() > 0 ? Resources(35, 0, 100) : Resources(0, 7, 10)),
     maxWorkerSlots(building->startResources.getGas() > 0 ? 3 : 16),
     activeWorkerSlots(0),
-    activeMuleSlots(0) {
+    activeMuleSlots(0),
+    chronoBoostActivated(false) {
 }
 
 Resources ResourceInst::mine() {
@@ -232,6 +232,17 @@ void ResourceInst::startTimer(){
 void ResourceInst::stopTimer(){
     timerActive = false;
     larvaeTimer = 0;
+}
+
+void ResourceInst::startChronoBoost() {
+    chronoBoostActivated = true;
+}
+void ResourceInst::stopChronoBoost() {
+    chronoBoostActivated = false;
+}
+
+bool ResourceInst::isChronoBoosted() {
+    return chronoBoostActivated;
 }
 
 bool ResourceInst::canInject(){

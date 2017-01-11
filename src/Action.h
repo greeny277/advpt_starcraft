@@ -13,12 +13,12 @@ class State;
 class Action {
     private:
         int startPoint;
-        int timeToFinish;
     protected:
         virtual ~Action() = default;
+        int timeToFinish;
     public:
         Action(int startPoint_, int timeToFinish_);
-        void tick();
+        virtual void tick(State &s);
         bool isReady() const;
         virtual nlohmann::json printStartJSON() = 0;
         virtual void printEndJSON(nlohmann::json&) = 0;
@@ -52,7 +52,7 @@ class ChronoAction: public AbilityAction {
     public:
         ChronoAction(int startPoint_, int triggeredBy_, int targetBuilding_);
         void finish(State &s) override;
-}
+};
 
 class InjectAction : public AbilityAction {
     public:
@@ -74,6 +74,7 @@ class BuildEntityAction : public Action {
         void printEndJSON(nlohmann::json&) override;
         void finish(State &s) override;
         inline bool hasFinished() const { return wasFinished; }
+        void tick(State &s) override;
         inline EntityBP *getBlueprint() const { return blueprint; }
 };
 

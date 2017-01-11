@@ -23,14 +23,13 @@ static std::vector<Ability*> createAbilities(const std::string &name) {
         abilities.push_back(&muleAbility);
     }
     if (name == "nexus") {
-        static ChronoAction chronoAction;
-        abilities.push_back(&chronoAction);
+        static ChronoAbility chronoAbility;
+        abilities.push_back(&chronoAbility);
     }
     if (name == "queen") {
         static InjectAbility injectAbility;
         abilities.push_back(&injectAbility);
     }
-    // TODO inject, chronoboost
     return abilities;
 }
 

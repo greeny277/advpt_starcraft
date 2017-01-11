@@ -7,11 +7,11 @@
 
 Action::Action(int startPoint_, int timeToFinish_) :
     startPoint(startPoint_),
-    timeToFinish(timeToFinish_){
+    timeToFinish(timeToFinish_*10){
     }
-void Action::tick() {
-    timeToFinish -= 1;
-    // TODO: Chronoboost Cuong
+void Action::tick(State &s) {
+    timeToFinish -= 10;
+
 }
 bool Action::isReady() const { return timeToFinish <= 0; }
 
@@ -50,11 +50,13 @@ void MuleAction::finish(State &s) {
 }
 
 ChronoAction::ChronoAction(int startPoint_, int triggeredBy_, int targetBuilding_):
-    AbilityAction("chronoboost", triggeredBy_, targetBuilding , -1, 20) {
+    AbilityAction("chronoboost", triggeredBy_, targetBuilding_ , startPoint_, 20) {
 }
 void ChronoAction::finish(State &s) {
-    // TODO
+    ResourceInst *res = dynamic_cast<ResourceInst*>(s.getEntity(targetBuilding));
+    res->stopChronoBoost();
 }
+
 InjectAction::InjectAction(int startPoint_, int triggeredBy_, int targetBuilding_) :
     AbilityAction("injectlarvae", triggeredBy_, targetBuilding_, startPoint_, 40) {
 }
@@ -107,6 +109,19 @@ void BuildEntityAction::printEndJSON(nlohmann::json& events) {
         j["producedIDs"].push_back(std::to_string(ent));
     }
     events.push_back(j);
+}
+
+void BuildEntityAction::tick(State &s) {
+    if(producedBy != -1 && !isReady()) {
+        ResourceInst *inst = dynamic_cast<ResourceInst*>(s.getEntity(producedBy));
+        if(inst != nullptr) {
+            if (inst->isChronoBoosted()) {
+                timeToFinish-=15;
+                return;
+            }
+        }
+    }
+    Action::tick(s);
 }
 
 void BuildEntityAction::finish(State &s) {
