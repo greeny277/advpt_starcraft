@@ -277,12 +277,12 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
     std::vector<WorkerInst *> mineralWorkers;
     std::vector<WorkerInst *> gasWorkers;
     for(auto& worker : s.getWorkers()) {
-        if(!worker.second.isBusy()) {
-            idleWorkers.push_back(&worker.second);
-        } else if (worker.second.isMiningMinerals(s)) {
+        if (worker.second.isMiningMinerals(s)) {
             mineralWorkers.push_back(&worker.second);
         } else if (worker.second.isMiningGas(s)) {
             gasWorkers.push_back(&worker.second);
+        } else if(!worker.second.isBusy()) {
+            idleWorkers.push_back(&worker.second);
         }
     }
 
@@ -394,8 +394,10 @@ int main(int argc, char *argv[]) {
                     if (buildNext->getMorphedFrom().size()) {
                         // find a non-busy entity to upgrade/morph
                         curState.iterEntities([&](EntityInst &ent) {
+
                             if (buildStarted)
                                 return;
+
                             buildStarted = ent.startMorphing(buildNext, curState);
                         });
                     } else if(unit != nullptr) {
