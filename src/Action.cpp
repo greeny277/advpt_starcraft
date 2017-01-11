@@ -97,6 +97,10 @@ void BuildEntityAction::finish(State &s) {
     bool morphed = producer != nullptr && producer->isMorphing();
 
     int id = blueprint->newInstance(s);
+    int id_new;
+    if(blueprint->getName() == "zergling"){
+        id_new = blueprint->newInstance(s);
+    }
 
     // stop worker to build
     if(worker != -1){
@@ -118,6 +122,9 @@ void BuildEntityAction::finish(State &s) {
         id = producedBy;
     }
     produced.push_back(id); // remember ID for JSON output
+    if(blueprint->getName() == "zergling"){
+        produced.push_back(id_new); // remember ID for JSON output
+    }
 
     // TODO: check if building produces two or one unit at the same time
     return;

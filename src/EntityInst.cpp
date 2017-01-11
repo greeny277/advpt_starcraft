@@ -57,7 +57,8 @@ void EntityInst::setMorphing(bool b){
     morphing =  b;
 }
 bool EntityInst::startMorphing(EntityBP *entity, State &s) {
-    if (!checkBuildRequirements(entity, s, dynamic_cast<const UnitBP*>(getBlueprint())) || !canMorph()) {
+    if (!checkBuildRequirements(entity, s, dynamic_cast<const UnitBP*>(getBlueprint())) || !canMorph())
+    {
         return false;
     }
     bool foundBp = false;
@@ -65,8 +66,12 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
         if (blueprint->getName() == bp)
             foundBp = true;
     }
-    if (!foundBp)
+    if (!foundBp){
         return false;
+    }
+    if (auto worker = dynamic_cast<WorkerInst *>(this)) {
+        worker->stopMining(s);
+    }
 
     s.buildActions.push_back(BuildEntityAction(entity, -1, getID(), s));
     morphing = true;
@@ -85,8 +90,6 @@ bool EntityInst::canMorph() const { return !isBusy(); }
 
 int EntityInst::getID() const { return id; }
 void EntityInst::setID(int id_) { id = id_; }
-
-bool UnitInst::isBusy() const { return false; }
 
 UnitInst::UnitInst(const UnitBP *unit) :
     EntityInst(unit) {
@@ -227,7 +230,7 @@ bool WorkerInst::startBuilding(BuildingBP *bbp, State &s) {
 void WorkerInst::stopBuilding() {
     isBuilding = false;
 }
-bool WorkerInst::isBusy() const { return isBuilding || workingResource != -1; }
+bool WorkerInst::isBusy() const { return isBuilding || isMorphing(); }
 bool WorkerInst::isMiningGas(State &s) const {
     if (workingResource == -1)
         return false;

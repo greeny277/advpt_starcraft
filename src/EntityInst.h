@@ -34,7 +34,6 @@ class EntityInst {
 };
 class UnitInst : public EntityInst {
     public:
-        bool isBusy() const override;
         explicit UnitInst(const UnitBP *unit);
         virtual ~UnitInst() = default;
 };

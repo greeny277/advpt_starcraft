@@ -152,6 +152,9 @@ int State::computeUsedSupply() const {
 
         if (auto bp = dynamic_cast<const UnitBP*>(action.getBlueprint())) {
             supply += bp->getSupplyCost();
+            if(bp->getName() == "zergling"){
+                supply += bp->getSupplyCost();
+            }
         }
     }
 
@@ -162,7 +165,7 @@ int State::computeMaxSupply() const {
     iterEntities([&](const EntityInst &e) {
         supply += e.getBlueprint()->getSupplyProvided();
     });
-    return supply;
+    return std::min(2000, supply);
 }
 
 void State::moveEntity(int old_id, int new_id) {

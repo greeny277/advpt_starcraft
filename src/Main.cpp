@@ -149,8 +149,8 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     message["time"] = curState.time;
     message["status"]["resources"]["minerals"] = curState.resources.getMinerals();
     message["status"]["resources"]["vespene"] = curState.resources.getGas();
-    message["status"]["resources"]["supply"] = curState.computeMaxSupply();
-    message["status"]["resources"]["supply-used"] = curState.computeUsedSupply();
+    message["status"]["resources"]["supply"] = curState.computeMaxSupply() / 10;
+    message["status"]["resources"]["supply-used"] = curState.computeUsedSupply() / 10;
 
     message["status"]["workers"]["minerals"] = mineralWorkers;
     message["status"]["workers"]["vespene"] = gasWorkers;
@@ -290,12 +290,12 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
     std::vector<WorkerInst *> mineralWorkers;
     std::vector<WorkerInst *> gasWorkers;
     for(auto& worker : s.getWorkers()) {
-        if(!worker.second.isBusy()) {
-            idleWorkers.push_back(&worker.second);
-        } else if (worker.second.isMiningMinerals(s)) {
+        if (worker.second.isMiningMinerals(s)) {
             mineralWorkers.push_back(&worker.second);
         } else if (worker.second.isMiningGas(s)) {
             gasWorkers.push_back(&worker.second);
+        } else if(!worker.second.isBusy()) {
+            idleWorkers.push_back(&worker.second);
         }
     }
 
@@ -407,8 +407,10 @@ int main(int argc, char *argv[]) {
                     if (buildNext->getMorphedFrom().size()) {
                         // find a non-busy entity to upgrade/morph
                         curState.iterEntities([&](EntityInst &ent) {
+
                             if (buildStarted)
                                 return;
+
                             buildStarted = ent.startMorphing(buildNext, curState);
                         });
                     } else if(unit != nullptr) {
