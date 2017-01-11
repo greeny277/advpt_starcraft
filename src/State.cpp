@@ -162,7 +162,7 @@ int State::computeMaxSupply() const {
     iterEntities([&](const EntityInst &e) {
         supply += e.getBlueprint()->getSupplyProvided();
     });
-    return supply;
+    return std::min(2000, supply);
 }
 
 void State::moveEntity(int old_id, int new_id) {

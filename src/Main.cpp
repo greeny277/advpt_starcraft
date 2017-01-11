@@ -149,8 +149,8 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     message["time"] = curState.time;
     message["status"]["resources"]["minerals"] = curState.resources.getMinerals();
     message["status"]["resources"]["vespene"] = curState.resources.getGas();
-    message["status"]["resources"]["supply"] = curState.computeMaxSupply();
-    message["status"]["resources"]["supply-used"] = curState.computeUsedSupply();
+    message["status"]["resources"]["supply"] = curState.computeMaxSupply() / 10;
+    message["status"]["resources"]["supply-used"] = curState.computeUsedSupply() / 10;
 
     message["status"]["workers"]["minerals"] = mineralWorkers;
     message["status"]["workers"]["vespene"] = gasWorkers;
