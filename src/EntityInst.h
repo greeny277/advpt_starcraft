@@ -55,6 +55,9 @@ class BuildingInst : public EntityInst {
 
 class ResourceInst : public BuildingInst {
     private:
+        bool timerActive;
+        int larvaeTimer;
+        std::vector<int> larvaeIds;
         Resources remaining;
         const Resources miningRate;
         const int maxWorkerSlots;
@@ -71,6 +74,13 @@ class ResourceInst : public BuildingInst {
 
         bool addMule();
         void removeMule();
+
+        void step(State &s);
+        void startTimer();
+        void stopTimer();
+        bool getFreeLarvaeCount() const;
+        void createLarvae(State &s);
+        void removeMorphingLarvae(State &s);
 
         int getActiveWorkerCount() const;
         int getFreeWorkerCount() const;
