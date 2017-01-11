@@ -146,7 +146,7 @@ void BuildEntityAction::finish(State &s) {
     if(producedBy != -1){
         if (producer->isMorphing()) {
             if(auto resource = dynamic_cast<ResourceInst*>(producer)) {
-                s.getResources().at(id).copyRemainingResources(*resource, s);
+                s.getResources().at(id).copyRemainingResources(*resource);
             }
             s.eraseEntity(producedBy);
         } else if (auto building = dynamic_cast<BuildingInst*>(producer)) {

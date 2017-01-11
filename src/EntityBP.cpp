@@ -89,7 +89,7 @@ BuildingBP::BuildingBP(std::string data[15]) :
 int BuildingBP::newInstance(State &state) const {
     int id;
     if (startResources.getGas() || startResources.getMinerals()) {
-        auto newResource = ResourceInst(this, state.time);
+        auto newResource = ResourceInst(this);
         if(getName() == "hatchery"){
             for ( int i = 0; i < 3; ++i ) {
                 newResource.createLarvae(state);
@@ -98,7 +98,7 @@ int BuildingBP::newInstance(State &state) const {
         id = newResource.getID();
         state.addResourceInst(newResource);
     } else {
-        auto newBuilding = BuildingInst(this,state.time);
+        auto newBuilding = BuildingInst(this);
         id = newBuilding.getID();
         state.addBuildingInst(newBuilding);
     }
