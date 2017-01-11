@@ -2,7 +2,7 @@
 ###########,,,,,,,,,,,
 # Protoss #,,,,,,,,,,,
 ###########,,,,,,,,,,,
-probe,50,0,17,1,0,0,0,protoss,,nexus,1,0,0,unit
+probe,50,0,17,1,0,0,0,protoss,,nexus,,1,0,0,unit
 zealot,100,0,38,2,0,0,0,protoss,,gateway,,0,0,0,unit
 stalker,125,50,42,2,0,0,0,protoss,,gateway,cybernetics_core,0,0,0,unit
 sentry,50,100,37,2,0,0,0,protoss,,gateway,cybernetics_core,0,0,0,unit
