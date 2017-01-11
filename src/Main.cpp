@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <queue>
+#include <string>
 
 #include "json.hpp"
 
@@ -355,102 +356,122 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
     return buildingStarted;
 }
 
-int main(int argc, char *argv[]) {
-    const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
-    for (int i = 1; i < argc; i++) {
-        auto initialUnits = readBuildOrder(blueprints, argv[i]);
-        if(initialUnits.empty()){
-            return EXIT_FAILURE;
-        }
-        std::string race(initialUnits.front()->getRace());
-        bool valid = validateBuildOrder(initialUnits, race, blueprints);
-        nlohmann::json j = getInitialJSON(blueprints, initialUnits, race, valid);
+const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
+void simulate(std::deque<EntityBP*> &initialUnits) {
+    std::string race(initialUnits.front()->getRace());
+    bool valid = validateBuildOrder(initialUnits, race, blueprints);
+    nlohmann::json j = getInitialJSON(blueprints, initialUnits, race, valid);
 
-        std::queue<EntityBP*> buildOrder(initialUnits);
+    std::queue<EntityBP*> buildOrder(initialUnits);
 
 
-        if (valid) {
-            std::vector<State> states;
-            auto messages = nlohmann::json::array();
+    if (valid) {
+        std::vector<State> states;
+        auto messages = nlohmann::json::array();
 
-            bool stillBuilding = false;
-            while (states.size() < 1000 && (stillBuilding || !buildOrder.empty())) {
-                if (states.empty()) {
-                    states.push_back(State(race, blueprints));
-                    j["initialUnits"] = states.back().getUnitJSON();
-                } else {
-                    states.push_back(states.back());
-                }
-                State &curState = states.back();
-                // increment time attribute
-                curState.time++;
-
-                // timestep 1
-                resourceUpdate(curState);
-                if(race == "zerg"){
-                    larvaeUpdate(curState);
-                }
-
-                // timestep 2
-                checkActions(curState.buildActions, curState);
-
-                // timestep 3
-                checkActions(curState.muleActions, curState);
-                bool canBuild = !checkAndRunAbilities(curState);
-
-                // timestep 3.5: maybe build something
-                BuildingBP *workerTask = nullptr;
-                bool buildStarted = false;
-                if (canBuild && !buildOrder.empty()) {
-                    auto buildNext = buildOrder.front();
-                    auto unit = dynamic_cast<UnitBP*>(buildNext);
-                    if (buildNext->getMorphedFrom().size()) {
-                        // find a non-busy entity to upgrade/morph
-                        curState.iterEntities([&](EntityInst &ent) {
-
-                            if (buildStarted)
-                                return;
-
-                            buildStarted = ent.startMorphing(buildNext, curState);
-                        });
-                    } else if(unit != nullptr) {
-                        // find a building where we can build the unit
-                        curState.iterEntities([&](EntityInst &ent) {
-                            auto building = dynamic_cast<BuildingInst*>(&ent);
-                            if (buildStarted || building == nullptr)
-                                return;
-                            buildStarted = building->produceUnit(unit, curState);
-                        });
-                    } else {
-                        // have redistributeWorkers() build the building
-                        workerTask = dynamic_cast<BuildingBP*>(buildNext);
-                        assert(workerTask != nullptr && "no idea how to build this thing");
-                    }
-                }
-
-                // timestep 4
-                buildStarted |= redistributeWorkers(curState, workerTask);
-                if (buildStarted)
-                    buildOrder.pop();
-
-                // timestep 5
-                printJSON(curState, messages);
-
-                stillBuilding = !curState.buildActions.empty();
-            }
-
-            if (!buildOrder.empty()) {
-                std::cerr << "Build order could not be finished." << std::endl;
-                valid = false;
-                //j["buildlistValid"] = 0;
-                // TODO: activate this
-                valid = false;
+        bool stillBuilding = false;
+        while (states.size() < 1000 && (stillBuilding || !buildOrder.empty())) {
+            if (states.empty()) {
+                states.push_back(State(race, blueprints));
+                j["initialUnits"] = states.back().getUnitJSON();
             } else {
-                j["messages"] = messages;
+                states.push_back(states.back());
             }
+            State &curState = states.back();
+            // increment time attribute
+            curState.time++;
+
+            // timestep 1
+            resourceUpdate(curState);
+            if(race == "zerg"){
+                larvaeUpdate(curState);
+            }
+
+            // timestep 2
+            checkActions(curState.buildActions, curState);
+
+            // timestep 3
+            checkActions(curState.muleActions, curState);
+            bool canBuild = !checkAndRunAbilities(curState);
+
+            // timestep 3.5: maybe build something
+            BuildingBP *workerTask = nullptr;
+            bool buildStarted = false;
+            if (canBuild && !buildOrder.empty()) {
+                auto buildNext = buildOrder.front();
+                auto unit = dynamic_cast<UnitBP*>(buildNext);
+                if (buildNext->getMorphedFrom().size()) {
+                    // find a non-busy entity to upgrade/morph
+                    curState.iterEntities([&](EntityInst &ent) {
+
+                        if (buildStarted)
+                            return;
+
+                        buildStarted = ent.startMorphing(buildNext, curState);
+                    });
+                } else if(unit != nullptr) {
+                    // find a building where we can build the unit
+                    curState.iterEntities([&](EntityInst &ent) {
+                        auto building = dynamic_cast<BuildingInst*>(&ent);
+                        if (buildStarted || building == nullptr)
+                            return;
+                        buildStarted = building->produceUnit(unit, curState);
+                    });
+                } else {
+                    // have redistributeWorkers() build the building
+                    workerTask = dynamic_cast<BuildingBP*>(buildNext);
+                    assert(workerTask != nullptr && "no idea how to build this thing");
+                }
+            }
+
+            // timestep 4
+            buildStarted |= redistributeWorkers(curState, workerTask);
+            if (buildStarted)
+                buildOrder.pop();
+
+            // timestep 5
+            printJSON(curState, messages);
+
+            stillBuilding = !curState.buildActions.empty();
         }
 
-        std::cout << j.dump(4) << std::endl;
+        if (!buildOrder.empty()) {
+            std::cerr << "Build order could not be finished." << std::endl;
+            valid = false;
+            //j["buildlistValid"] = 0;
+            // TODO: activate this
+            valid = false;
+        } else {
+            j["messages"] = messages;
+        }
+    }
+
+    std::cout << j.dump(4) << std::endl;
+}
+
+[[noreturn]] static void usage(char *argv[]) {
+    std::cerr << "Usage: " << argv[0] << " forward  | rush UNIT TIMEOUT | push UNIT COUNT " << std::endl;
+    exit(EXIT_FAILURE);
+}
+
+int main(int argc, char *argv[]) {
+    if (std::strcmp(argv[1], "forward") == 0 && argc >= 3) {
+        for (int i = 2; i < argc; i++) {
+            auto initialUnits = readBuildOrder(blueprints, argv[i]);
+            if(initialUnits.empty()) {
+                std::cerr << "Invalid build order?" << std::endl;
+                return EXIT_FAILURE;
+            }
+            simulate(initialUnits);
+        }
+    } else if (std::strcmp(argv[1], "rush") == 0 && argc == 4) {
+        auto &unitBP = blueprints.at(argv[2]);
+        int timeout = std::atoi(argv[3]);
+    } else if (std::strcmp(argv[1], "push") == 0 && argc == 4) {
+        auto &unitBP = blueprints.at(argv[2]);
+        int count = std::atoi(argv[3]);
+    } else {
+        usage(argv);
     }
 
     return EXIT_SUCCESS;
