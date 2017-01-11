@@ -83,6 +83,11 @@ int BuildingBP::newInstance(State &state) const {
     int id;
     if (startResources.getGas() || startResources.getMinerals()) {
         auto newResource = ResourceInst(this, state.time);
+        if(getName() == "hatchery"){
+            for ( int i = 0; i < 3; ++i ) {
+                newResource.createLarvae(state);
+            }
+        }
         id = newResource.getID();
         state.addResourceInst(newResource);
     } else {

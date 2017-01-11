@@ -1,4 +1,5 @@
 // vim: ts=4:sw=4 expandtab
+//
 #include "State.h"
 
 State::State(const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints_) :
@@ -25,11 +26,6 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
         } else if (race == "zerg") {
             workerName = "drone";
             mainBuildingID = blueprints.at("hatchery").get()->newInstance(*this);
-
-            auto larva = static_cast<const UnitBP*>(blueprints.at("larva").get());
-            for (size_t i = 0; i < 3; i++) {
-                larva->newInstance(*this);
-            }
             blueprints.at("overlord")->newInstance(*this);
         } else {
             assert(false);

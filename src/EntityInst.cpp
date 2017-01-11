@@ -137,6 +137,9 @@ void BuildingInst::incFreeBuildSlots(){
 
 ResourceInst::ResourceInst(const BuildingBP *building, int buildTime_) :
     BuildingInst(building, buildTime_),
+    timerActive(false),
+    larvaeTimer(0),
+    larvaeIds({}),
     remaining(building->startResources),
     miningRate(building->startResources.getGas() > 0 ? Resources(35, 0, 100) : Resources(0, 7, 10)),
     maxWorkerSlots(building->startResources.getGas() > 0 ? 3 : 16),
@@ -181,6 +184,53 @@ void ResourceInst::removeMule() {
     assert(isMinerals());
     assert(activeMuleSlots > 0);
     activeMuleSlots--;
+}
+
+void ResourceInst::step(State &s){
+    removeMorphingLarvae(s);
+    if(!getFreeLarvaeCount()){
+        stopTimer();
+        return;
+    } else {
+        larvaeTimer = (larvaeTimer+1) % 15;
+        if (larvaeTimer == 0) {
+            createLarvae(s);
+            if(!getFreeLarvaeCount()){
+                stopTimer();
+            }
+        }
+    }
+}
+bool ResourceInst::getFreeLarvaeCount() const{
+    return larvaeIds.size() < 3;
+}
+
+void ResourceInst::createLarvae(State &s){
+    auto larva = static_cast<const UnitBP*>(s.blueprints.at("larva").get());
+    larvaeIds.push_back(larva->newInstance(s));
+}
+
+void ResourceInst::removeMorphingLarvae(State &s){
+	for (auto it = larvaeIds.begin() ; it != larvaeIds.end(); ) {
+        if(s.getEntity(*it)->isMorphing()){
+			it = larvaeIds.erase(it);
+		} else {
+			++it;
+		}
+	}
+    if (!timerActive){
+        startTimer();
+    }
+}
+
+void ResourceInst::startTimer(){
+    timerActive = true;
+    larvaeTimer = 0;
+}
+
+void ResourceInst::stopTimer(){
+    timerActive = false;
+    larvaeTimer = 0;
 }
 
 int ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
