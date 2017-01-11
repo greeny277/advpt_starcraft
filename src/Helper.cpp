@@ -12,3 +12,10 @@ bool buildOrderCheckOneOf(const std::unordered_set<std::string> &oneOf, const st
     }
     return true;
 }
+
+bool isVespeneInst(const std::string &name) {
+	if(name.compare("assimilator") == 0 || name.compare("refinery") == 0 || name.compare("extractor") == 0 ) {
+		return true;
+	}
+	return false;
+}

@@ -73,8 +73,7 @@ void resourceUpdate(State &state) {
 }
 
 void larvaeUpdate(State &state) {
-    // Check current number of larvaes
-    int currentLarvaes = 0;
+   int currentLarvaes = 0;
     state.iterEntities([&](EntityInst& ent) {
         if(ent.getBlueprint()->getName() == "larva"){
             currentLarvaes++;
@@ -216,7 +215,6 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         dependencies.insert(ent.getBlueprint()->getName());
     });
 
-    // TODO: there are only two vespene geysers per base
     // TODO: supply
     int vespInst = 0;
     for(auto bp : initialUnits) {
@@ -227,6 +225,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         if(bp->getCosts().getGas() > 0 && vespInst < 1) {
             std::cerr << "Building for mining vespene missing, can not build entity which requires vespene gas: "<< bp->getName() << std::endl;
         }
+
         // check if the building has all the required dependencies
         auto requireOneOf = bp->getRequireOneOf();
         bool valid = buildOrderCheckOneOf(requireOneOf, dependencies);
@@ -257,7 +256,15 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
                 break;
             }
         }
-
+        // there are only two vespene geysers per base
+        if(isVespeneInst(bp->getName())) {
+            if(vespInst == 2) {
+                std::cerr << "there are only two vespene geysers per base, cannot build : " << bp->getName() << std::endl;
+                return false;
+            } else {
+                vespInst++;
+            }
+        }
         dependencies.insert(bp->getName());
     }
     return true;
