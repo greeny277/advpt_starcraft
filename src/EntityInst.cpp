@@ -95,16 +95,12 @@ UnitInst::UnitInst(const UnitBP *unit) :
     EntityInst(unit) {
 }
 
-BuildingInst::BuildingInst(const BuildingBP *building, int buildTime_) :
+BuildingInst::BuildingInst(const BuildingBP *building) :
     EntityInst(building),
     freeBuildSlots(building->getBuildSlots()),
-    buildTime(buildTime_),
     chronoBoostActivated(false) {
 }
 
-int BuildingInst::getBuildTime() const {
-    return buildTime;
-}
 
 bool BuildingInst::isBusy() const {
     return freeBuildSlots == 0 || EntityInst::isBusy();
@@ -135,11 +131,11 @@ void BuildingInst::incFreeBuildSlots(){
     freeBuildSlots++;
 }
 
-ResourceInst::ResourceInst(const BuildingBP *building, int buildTime_) :
-    BuildingInst(building, buildTime_),
+ResourceInst::ResourceInst(const BuildingBP *building) :
+    BuildingInst(building),
     timerActive(false),
-    inject(false),
     larvaeTimer(0),
+    inject(false),
     larvaeIds({}),
     remaining(building->startResources),
     miningRate(building->startResources.getGas() > 0 ? Resources(35, 0, 100) : Resources(0, 7, 10)),
@@ -252,7 +248,7 @@ int ResourceInst::getFreeWorkerCount() const { return maxWorkerSlots - activeWor
 bool ResourceInst::isGas() const { return (miningRate * 1000).getGas() > 0; }
 
 bool ResourceInst::isMinerals() const { return (miningRate * 1000).getMinerals() > 0; }
-void ResourceInst::copyRemainingResources(ResourceInst &other, State &s) {
+void ResourceInst::copyRemainingResources(ResourceInst &other) {
     remaining = other.remaining;
     activeMuleSlots = other.activeMuleSlots;
     int workers = other.activeWorkerSlots;
@@ -310,6 +306,6 @@ bool WorkerInst::isMiningMinerals(State &s) const {
     return s.getResources().at(workingResource).isMinerals();
 }
 
-bool WorkerInst::isAssignedTo(int id) const {
-    return id == workingResource;
+bool WorkerInst::isAssignedTo(int id_) const {
+    return id_ == workingResource;
 }

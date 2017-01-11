@@ -40,11 +40,10 @@ class UnitInst : public EntityInst {
 
 class BuildingInst : public EntityInst {
     private:
-        int buildTime; // necessary for hatcheries
         int freeBuildSlots;
         bool chronoBoostActivated;
     public:
-        explicit BuildingInst(const BuildingBP *building, int buildTime);
+        explicit BuildingInst(const BuildingBP *building);
         bool isBusy() const override;
         bool produceUnit(UnitBP *entity, State &s);
         void incFreeBuildSlots();
@@ -65,7 +64,7 @@ class ResourceInst : public BuildingInst {
         int activeWorkerSlots;
         int activeMuleSlots;
     public:
-        explicit ResourceInst(const BuildingBP *building, int buildTime);
+        explicit ResourceInst(const BuildingBP *building);
         Resources mine();
         Resources getRemainingResources() const;
         /** Add/remove worker from resource and return true if
@@ -90,7 +89,7 @@ class ResourceInst : public BuildingInst {
         int getFreeWorkerCount() const;
         bool isGas() const;
         bool isMinerals() const;
-        void copyRemainingResources(ResourceInst &other, State &s);
+        void copyRemainingResources(ResourceInst &other);
         ~ResourceInst() override = default;
 };
 
