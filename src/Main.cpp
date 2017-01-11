@@ -109,6 +109,7 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     auto events = nlohmann::json::array();
     actionsToJSON(curState.buildActions, events, curState.time);
     actionsToJSON(curState.muleActions, events, curState.time);
+    actionsToJSON(curState.injectActions, events, curState.time);
     int mineralWorkers = 0;
     int gasWorkers = 0;
     curState.iterEntities([&](EntityInst& entity) {
@@ -376,6 +377,7 @@ int main(int argc, char *argv[]) {
 
                 // timestep 3
                 checkActions(curState.muleActions, curState);
+                checkActions(curState.injectActions, curState);
                 bool canBuild = !checkAndRunAbilities(curState);
 
                 // timestep 3.5: maybe build something

@@ -22,6 +22,10 @@ static std::vector<Ability*> createAbilities(const std::string &name) {
         static MuleAbility muleAbility;
         abilities.push_back(&muleAbility);
     }
+    if (name == "queen") {
+        static InjectAbility injectAbility;
+        abilities.push_back(&injectAbility);
+    }
     // TODO inject, chronoboost
     return abilities;
 }

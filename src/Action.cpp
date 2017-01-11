@@ -36,7 +36,7 @@ nlohmann::json AbilityAction::printStartJSON() {
     j["name"] = name;
     j["triggeredBy"] = std::to_string(triggeredBy);
     if (targetBuilding != -1) {
-        j["targetBuilding"] = targetBuilding;
+        j["targetBuilding"] = std::to_string(targetBuilding);
     }
     return j;
 }
@@ -48,6 +48,20 @@ MuleAction::MuleAction(int startPoint_, int triggeredBy_) :
 void MuleAction::finish(State &s) {
     s.getResources().at(triggeredBy).removeMule();
 }
+
+InjectAction::InjectAction(int startPoint_, int triggeredBy_, int targetBuilding_) :
+    AbilityAction("injectlarvae", triggeredBy_, targetBuilding_, startPoint_, 40) {
+}
+
+void InjectAction::finish(State &s){
+    ResourceInst *res = dynamic_cast<ResourceInst*>(s.getEntity(targetBuilding));
+    for ( int i = 0; i < 4; ++i )
+    {
+        res->createLarvae(s);
+    }
+    res->stopInject();
+}
+
 
 BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
         int producedBy_, State &s) :

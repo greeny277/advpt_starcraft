@@ -57,6 +57,7 @@ class ResourceInst : public BuildingInst {
     private:
         bool timerActive;
         int larvaeTimer;
+        bool inject;
         std::vector<int> larvaeIds;
         Resources remaining;
         const Resources miningRate;
@@ -81,6 +82,9 @@ class ResourceInst : public BuildingInst {
         bool getFreeLarvaeCount() const;
         void createLarvae(State &s);
         void removeMorphingLarvae(State &s);
+        bool canInject();
+        void startInject();
+        void stopInject();
 
         int getActiveWorkerCount() const;
         int getFreeWorkerCount() const;

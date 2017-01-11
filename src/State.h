@@ -21,6 +21,7 @@ public:
     int time;
     Resources resources;
     std::vector<MuleAction> muleActions;
+    std::vector<InjectAction> injectActions;
     std::vector<BuildEntityAction> buildActions;
     const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints;
     std::unordered_multiset<std::string> alreadyProduced; // Keeps track of currently existing entities by name

@@ -138,6 +138,7 @@ void BuildingInst::incFreeBuildSlots(){
 ResourceInst::ResourceInst(const BuildingBP *building, int buildTime_) :
     BuildingInst(building, buildTime_),
     timerActive(false),
+    inject(false),
     larvaeTimer(0),
     larvaeIds({}),
     remaining(building->startResources),
@@ -211,13 +212,13 @@ void ResourceInst::createLarvae(State &s){
 }
 
 void ResourceInst::removeMorphingLarvae(State &s){
-	for (auto it = larvaeIds.begin() ; it != larvaeIds.end(); ) {
+    for (auto it = larvaeIds.begin() ; it != larvaeIds.end(); ) {
         if(s.getEntity(*it)->isMorphing()){
-			it = larvaeIds.erase(it);
-		} else {
-			++it;
-		}
-	}
+            it = larvaeIds.erase(it);
+        } else {
+            ++it;
+        }
+    }
     if (!timerActive){
         startTimer();
     }
@@ -231,6 +232,18 @@ void ResourceInst::startTimer(){
 void ResourceInst::stopTimer(){
     timerActive = false;
     larvaeTimer = 0;
+}
+
+bool ResourceInst::canInject(){
+    return !inject;
+}
+
+void ResourceInst::startInject(){
+    inject = true;
+}
+
+void ResourceInst::stopInject(){
+    inject = false;
 }
 
 int ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
