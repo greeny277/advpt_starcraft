@@ -17,8 +17,8 @@ phoenix,150,100,35,20,0,0,0,protoss,,stargate,,0,0,0,unit
 void_ray,250,150,60,30,0,0,0,protoss,,stargate,,0,0,0,unit
 carrier,350,250,120,60,0,0,0,protoss,,stargate,fleet_beacon,0,0,0,unit
 #buildings,,,,,0,,,,,,
-nexus,400,0,100,0,10,0,100,protoss,,probe,,0,0,12000,building
-pylon,100,0,25,0,8,0,0,protoss,,probe,,0,0,0,building
+nexus,400,0,100,0,100,0,100,protoss,,probe,,0,0,12000,building
+pylon,100,0,25,0,80,0,0,protoss,,probe,,0,0,0,building
 gateway,150,0,65,0,0,0,0,protoss,,probe,pylon,0,0,0,building
 cybernetics_core,150,0,50,0,0,0,0,protoss,,probe,gateway,0,0,0,building
 robotics_facility,200,100,65,0,0,0,0,protoss,,probe,cybernetics_core,0,0,0,building
@@ -35,7 +35,7 @@ photon_cannon,150,0,40,0,0,0,0,protoss,,probe,forge,0,0,0,building
 ##########,,,,,,,,,,,
 #  Zerg  #,,,,,,,,,,,
 ##########,,,,,,,,,,,
-overlord,100,0,25,0,8,0,0,zerg,larva,,,0,0,0,unit
+overlord,100,0,25,0,80,0,0,zerg,larva,,,0,0,0,unit
 overseer,50,50,17,0,8,0,0,zerg,overlord,,lair/hive,0,0,0,unit
 hydralisk,100,50,33,20,0,0,0,zerg,larva,,hydralisk_den,0,0,0,unit
 drone,50,0,17,10,0,0,0,zerg,larva,,,1,0,0,unit
@@ -51,10 +51,10 @@ brood_lord,150,150,34,40,0,0,0,zerg,corruptor,,greater_spire,0,0,0,unit
 corruptor,150,100,40,20,0,0,0,zerg,larva,,spire/greater_spire,0,0,0,unit
 mutalisk,100,100,33,20,0,0,0,zerg,larva,,spire/greater_spire,0,0,0,unit
 #buildings,,,,,,,,,,,
-hatchery,300,0,100,0,2,0,0,zerg,drone,,,0,0,12000,building
+hatchery,300,0,100,0,20,0,0,zerg,drone,,,0,0,12000,building
 evolution_chamber,75,0,35,0,0,0,0,zerg,drone,,,0,0,0,building
 spore_crawler,75,0,30,0,0,0,0,zerg,drone,,evolution_chamber,0,0,0,building
-lair,150,100,80,0,2,0,0,zerg,hatchery,,spawning_pool,0,0,12000,building
+lair,150,100,80,0,20,0,0,zerg,hatchery,,spawning_pool,0,0,12000,building
 spawning_pool,200,0,65,0,0,0,0,zerg,drone,,,0,0,0,building
 extractor,25,0,30,0,0,0,0,zerg,drone,,,0,2500,0,building
 spine_crawler,100,0,50,0,0,0,0,zerg,drone,,spawning_pool,0,0,0,building
@@ -62,7 +62,7 @@ roach_warren,150,0,55,0,0,0,0,zerg,drone,,spawning_pool,0,0,0,building
 baneling_nest,100,50,60,0,0,0,0,zerg,drone,,spawning_pool,0,0,0,building
 hydralisk_den,100,100,40,0,0,0,0,zerg,drone,,lair/hive,0,0,0,building
 infestation_pit,100,100,50,0,0,0,0,zerg,drone,,lair/hive,0,0,0,building
-hive,200,150,100,0,2,0,0,zerg,lair,,infestation_pit,0,0,12000,building
+hive,200,150,100,0,20,0,0,zerg,lair,,infestation_pit,0,0,12000,building
 nydus_network,150,200,50,0,0,0,0,zerg,drone,,lair/hive,0,0,0,building
 ultralisk_cavern,150,200,65,0,0,0,0,zerg,drone,,hive,0,0,0,building
 greater_spire,100,150,100,0,0,0,0,zerg,spire,,hive,0,0,0,building
@@ -85,9 +85,9 @@ raven,100,200,60,20,0,0,0,terran,,starport_with_tech_lab,,0,0,0,unit
 banshee,150,100,60,30,0,0,0,terran,,starport_with_tech_lab,,0,0,0,unit
 battlecruiser,400,300,90,60,0,0,0,terran,,starport_with_tech_lab,fusion_core,0,0,0,unit
 #buildings,,,,,0,,,,,,
-command_center,400,0,100,0,11,0,0,terran,,scv,,0,0,12000,building
-orbital_command,150,0,35,0,11,50,200,terran,command_center,,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,12000,building
-planetary_fortress,150,150,50,0,11,0,0,terran,command_center,,engineering_bay,0,0,12000,building
+command_center,400,0,100,0,110,0,0,terran,,scv,,0,0,12000,building
+orbital_command,150,0,35,0,110,50,200,terran,command_center,,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,12000,building
+planetary_fortress,150,150,50,0,110,0,0,terran,command_center,,engineering_bay,0,0,12000,building
 refinery,75,0,30,0,0,0,0,terran,,scv,,0,2500,0,building
 engineering_bay,125,0,35,0,0,0,0,terran,,scv,,0,0,0,building
 missile_turret,100,0,25,0,0,0,0,terran,,scv,engineering_bay,0,0,0,building
@@ -99,7 +99,7 @@ bunker,100,0,35,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_wit
 ghost_academy,150,50,40,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
 starport,150,100,50,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
 fusion_core,150,150,65,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
-supply_depot,100,0,30,0,8,0,0,terran,,scv,,0,0,0,building
+supply_depot,100,0,30,0,80,0,0,terran,,scv,,0,0,0,building
 barracks_with_reactor,50,50,50,0,0,0,0,terran,barracks,,,0,0,0,building
 barracks_with_tech_lab,50,25,25,0,0,0,0,terran,barracks,,,0,0,0,building
 starport_with_reactor,50,50,50,0,0,0,0,terran,starport,,,0,0,0,building
