@@ -215,8 +215,9 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         dependencies.insert(ent.getBlueprint()->getName());
     });
 
-    // TODO: supply
     int vespInst = 0;
+    int currentSupply = 10; // 1 base = 10 supply
+    int neededSupply = 6; // six workers at begin
     for(auto bp : initialUnits) {
         if(bp->getRace() != race) {
             std::cerr << "entities to be build do not belong to one race" << std::endl;
@@ -224,6 +225,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         }
         if(bp->getCosts().getGas() > 0 && vespInst < 1) {
             std::cerr << "Building for mining vespene missing, can not build entity which requires vespene gas: "<< bp->getName() << std::endl;
+            return false;
         }
 
         // check if the building has all the required dependencies
@@ -265,7 +267,18 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
                 vespInst++;
             }
         }
+        auto *unit = dynamic_cast<const UnitBP*>(bp);
+        if(unit != nullptr) {
+            neededSupply+=unit->getSupplyCost();
+        }
+        currentSupply+=bp->getSupplyProvided();
         dependencies.insert(bp->getName());
+
+    }
+    
+    if(neededSupply > currentSupply) {
+        std::cout << "not enough supplies to build new units, needed: " << neededSupply << " provided: " << currentSupply << std::endl;
+        return false;
     }
     return true;
 }
