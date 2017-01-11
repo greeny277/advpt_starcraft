@@ -306,7 +306,6 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
             if (!workers->empty()) {
                 auto worker = workers->back();
                 workers->pop_back();
-                worker->stopMining(s);
                 if (worker->startBuilding(bpToBuild, s)) {
                     buildingStarted = true;
                 } else {

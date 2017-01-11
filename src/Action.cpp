@@ -104,7 +104,9 @@ void BuildEntityAction::finish(State &s) {
 
     // stop worker to build
     if(worker != -1){
-        s.getWorkers().at(worker).stopBuilding(); // TODO: protoss can go back to mining immediately
+        if(blueprint->getRace() != "protoss") {
+            s.getWorkers().at(worker).stopBuilding();
+        }
     }
     if(producedBy != -1){
         if (producer->isMorphing()) {

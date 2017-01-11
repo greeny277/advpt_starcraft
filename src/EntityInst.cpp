@@ -217,12 +217,15 @@ bool WorkerInst::startBuilding(BuildingBP *bbp, State &s) {
     if (isMorphing()) {
         return false;
     }
-
-    stopMining(s);
+    if(getBlueprint()->getName() != "probe") {
+        stopMining(s);
+    }
     if (!checkBuildRequirements(bbp, s, nullptr) || !bbp->getMorphedFrom().empty()) {
         return false;
     }
-    isBuilding = true;
+    if(getBlueprint()->getName() != "probe") {
+        isBuilding = true;
+    }
     s.buildActions.push_back(BuildEntityAction(bbp, getID(), -1, s));
     return true;
 }
