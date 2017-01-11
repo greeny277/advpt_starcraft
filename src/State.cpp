@@ -152,6 +152,9 @@ int State::computeUsedSupply() const {
 
         if (auto bp = dynamic_cast<const UnitBP*>(action.getBlueprint())) {
             supply += bp->getSupplyCost();
+            if(bp->getName() == "zergling"){
+                supply += bp->getSupplyCost();
+            }
         }
     }
 
