@@ -216,13 +216,16 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         dependencies.insert(ent.getBlueprint()->getName());
     });
 
-    // TODO requirement vespin units can only be build if vespinInst exists
     // TODO: there are only two vespene geysers per base
     // TODO: supply
+    int vespInst = 0;
     for(auto bp : initialUnits) {
         if(bp->getRace() != race) {
             std::cerr << "entities to be build do not belong to one race" << std::endl;
             return false;
+        }
+        if(bp->getCosts().getGas() > 0 && vespInst < 1) {
+            std::cerr << "Building for mining vespene missing, can not build entity which requires vespene gas: "<< bp->getName() << std::endl;
         }
         // check if the building has all the required dependencies
         auto requireOneOf = bp->getRequireOneOf();
