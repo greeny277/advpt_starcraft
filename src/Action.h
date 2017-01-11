@@ -29,8 +29,8 @@ class Action {
 class AbilityAction : public Action {
     private:
         const char *name;
-        int targetBuilding; // optional
     protected:
+        int targetBuilding; // optional
         int triggeredBy;
         AbilityAction(const char *name_,
             const int triggeredBy_,
@@ -53,6 +53,12 @@ class ChronoAction: public AbilityAction {
         ChronoAction(int startPoint_, int triggeredBy_, int targetBuilding_);
         void finish(State &s) override;
 }
+
+class InjectAction : public AbilityAction {
+    public:
+        InjectAction(int startPoint_, int triggeredBy_, int targetBuilding_);
+        void finish(State &s) override;
+};
 
 class BuildEntityAction : public Action {
     private:

@@ -11,6 +11,7 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
     resources{0, 50},
     muleActions{},
     chronoActions{},
+    injectActions{},
     buildActions{},
     blueprints(blueprints_),
     alreadyProduced{} {

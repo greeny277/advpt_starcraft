@@ -26,6 +26,10 @@ static std::vector<Ability*> createAbilities(const std::string &name) {
         static ChronoAction chronoAction;
         abilities.push_back(&chronoAction);
     }
+    if (name == "queen") {
+        static InjectAbility injectAbility;
+        abilities.push_back(&injectAbility);
+    }
     // TODO inject, chronoboost
     return abilities;
 }
