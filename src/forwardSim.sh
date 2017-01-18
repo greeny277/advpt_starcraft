@@ -1,6 +1,5 @@
 #!/bin/sh
 
-set -x
 
 cd build
 file="$2"
