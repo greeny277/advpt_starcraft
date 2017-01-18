@@ -22,8 +22,7 @@ std::unordered_map<std::string, std::unique_ptr<EntityBP>> readConfig() {
 
     std::string line;
     std::string race;
-    std::fstream csv;
-    csv.open("../techtree.csv");
+    std::fstream csv("techtree.csv", std::ios::in);
     while(std::getline(csv, line)) {
         if (line[0] == '#') {
             continue;
@@ -44,14 +43,20 @@ std::unordered_map<std::string, std::unique_ptr<EntityBP>> readConfig() {
         res.emplace(cells[0], std::unique_ptr<EntityBP>(ent));
 
     }
+    if (res.empty()) {
+        std::cerr << "Failed to parse CSV file." << std::endl;
+        exit(EXIT_FAILURE);
+    }
     return res;
 }
 
 
 std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints, const char *const fname) {
     std::deque<EntityBP*> bps;
-    std::fstream input;
-    input.open(fname);
+    std::fstream input(fname, std::ios::in);
+    if (!input.is_open()) {
+        std::cerr << "failed to open input file '" << fname << "'" << std::endl;
+    }
     std::string line;
     while(std::getline(input, line)) {
         auto itEntBP = blueprints.find(line);
@@ -60,6 +65,9 @@ std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, std::
             return {};
         }
         bps.push_back(itEntBP->second.get());
+    }
+    if (bps.empty()) {
+        std::cerr << "empty input file?" << std::endl;
     }
     return bps;
 }
@@ -142,7 +150,6 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     messages.push_back(message);
 }
 static nlohmann::json getInitialJSON(const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints,
-        const std::deque<EntityBP*> &initialUnits,
         const std::string &race,
         bool valid) {
     nlohmann::json j;
@@ -150,19 +157,6 @@ static nlohmann::json getInitialJSON(const std::unordered_map<std::string, std::
     game.append(race);
     j["game"] = game;
     j["buildlistValid"] = valid ? 1 : 0;
-
-    for (const auto &bp : blueprints) {
-        nlohmann::json positions = nlohmann::json::array();
-        for (size_t i = 0; i < initialUnits.size(); i++) {
-            if (initialUnits[i] == bp.second.get()) {
-                positions.push_back(std::to_string(i)); // again, why strings???
-            }
-        }
-
-        if (positions.size() > 0) {
-            j["initialUnits"][bp.first] = positions;
-        }
-    }
     return j;
 }
 template<typename T>
@@ -339,10 +333,9 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 }
 
 const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
-void simulate(std::deque<EntityBP*> &initialUnits) {
-    std::string race(initialUnits.front()->getRace());
-    bool valid = validateBuildOrder(initialUnits, race, blueprints);
-    nlohmann::json j = getInitialJSON(blueprints, initialUnits, race, valid);
+static void simulate(std::deque<EntityBP*> &initialUnits, std::string &race) {
+    bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race, blueprints);
+    nlohmann::json j = getInitialJSON(blueprints, race, valid);
 
     std::queue<EntityBP*> buildOrder(initialUnits);
 
@@ -439,14 +432,14 @@ void simulate(std::deque<EntityBP*> &initialUnits) {
 }
 
 int main(int argc, char *argv[]) {
-    if (std::strcmp(argv[1], "forward") == 0 && argc >= 3) {
-        for (int i = 2; i < argc; i++) {
+    if (std::strcmp(argv[1], "forward") == 0 && argc >= 4) {
+        std::string race(argv[2]);
+        for (int i = 3; i < argc; i++) {
             auto initialUnits = readBuildOrder(blueprints, argv[i]);
             if(initialUnits.empty()) {
                 std::cerr << "Invalid build order?" << std::endl;
-                return EXIT_FAILURE;
             }
-            simulate(initialUnits);
+            simulate(initialUnits, race);
         }
     } else if (std::strcmp(argv[1], "rush") == 0 && argc == 4) {
         auto &unitBP = blueprints.at(argv[2]);
