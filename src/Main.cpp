@@ -65,46 +65,27 @@ std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, std::
 }
 void resourceUpdate(State &state) {
     state.iterEntities([&](EntityInst& ent) {
-        ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
-        if (res != nullptr) {
+            ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
+            if (res != nullptr) {
             state.resources += res->mine();
-        }
-        ent.restoreEnergy();
-    });
+            }
+            ent.restoreEnergy();
+            });
 }
 
 void larvaeUpdate(State &state) {
-   int currentLarvaes = 0;
     state.iterEntities([&](EntityInst& ent) {
-        if(ent.getBlueprint()->getName() == "larva"){
-            currentLarvaes++;
-        }
-    });
-    if(currentLarvaes >= 3){
-        return;
-    }
-    state.iterEntities([&](EntityInst& ent) {
-        if(currentLarvaes == 3){
-             return;
-        }
-
-        BuildingInst* build = dynamic_cast<BuildingInst*>(&ent);
-
-        if(build != nullptr){
-            auto name = build->getBlueprint()->getName();
+            ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
+            if(res != nullptr){
+            auto name = res->getBlueprint()->getName();
             auto larvaeProducer = {"hatchery","lair","hive"};
             auto r = find(larvaeProducer.begin(), larvaeProducer.end(),name);
             if (r != larvaeProducer.end()) {
-                if((state.time - build->getBuildTime()) % 15 == 0) {
-                    // Create new larva
-                    auto larva = static_cast<const UnitBP*>(state.blueprints.at("larva").get());
-                    larva->newInstance(state);
-                    currentLarvaes++;
-                    }
-                }
-        }
+            res->step(state);
+            }
+            }
 
-    });
+            });
 }
 
 template<typename T>
@@ -129,17 +110,19 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     auto events = nlohmann::json::array();
     actionsToJSON(curState.buildActions, events, curState.time);
     actionsToJSON(curState.muleActions, events, curState.time);
+    actionsToJSON(curState.injectActions, events, curState.time);
+    actionsToJSON(curState.chronoActions, events, curState.time);
     int mineralWorkers = 0;
     int gasWorkers = 0;
     curState.iterEntities([&](EntityInst& entity) {
             auto res = dynamic_cast<const ResourceInst*>(&entity);
             if (res != nullptr) {
-                if (res->isMinerals())
-                    mineralWorkers += res->getActiveWorkerCount();
-                if (res->isGas())
-                    gasWorkers += res->getActiveWorkerCount();
+            if (res->isMinerals())
+            mineralWorkers += res->getActiveWorkerCount();
+            if (res->isGas())
+            gasWorkers += res->getActiveWorkerCount();
             }
-        });
+            });
     if (events.size() == 0 && mineralWorkers == lastMineralWorkers && gasWorkers == lastGasWorkers) {
         return;
     }
@@ -185,7 +168,7 @@ static nlohmann::json getInitialJSON(const std::unordered_map<std::string, std::
 template<typename T>
 static void checkActions(std::vector<T>& actions, State& s){
     for(Action& action : actions){
-        action.tick();
+        action.tick(s);
         if(action.isReady()){
             action.finish(s);
         }
@@ -196,15 +179,15 @@ static void checkActions(std::vector<T>& actions, State& s){
 static bool checkAndRunAbilities(State &s) {
     bool result = false;
     s.iterEntities([&](EntityInst& e) {
-        for (const Ability *ab : e.getBlueprint()->getAbilities()) {
+            for (const Ability *ab : e.getBlueprint()->getAbilities()) {
             if (e.getCurrentEnergy() >= ab->energyCosts && !result) {
-                if (ab->create(s, e.getID())) {
-                    e.removeEnergy(ab->energyCosts);
-                    result = true;
-                }
+            if (ab->create(s, e.getID())) {
+            e.removeEnergy(ab->energyCosts);
+            result = true;
             }
-        }
-    });
+            }
+            }
+            });
     return result;
 }
 
@@ -213,8 +196,8 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
     State s(race, blueprints);
     std::unordered_multiset<std::string> dependencies;
     s.iterEntities([&](const EntityInst &ent) {
-        dependencies.insert(ent.getBlueprint()->getName());
-    });
+            dependencies.insert(ent.getBlueprint()->getName());
+            });
 
     int vespInst = 0;
     int currentSupply = s.computeMaxSupply(); // 1 base = 10 supply
@@ -276,7 +259,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
         dependencies.insert(bp->getName());
 
     }
-    
+
     if(neededSupply > currentSupply) {
         std::cout << "not enough supplies to build new units, needed: " << neededSupply << " provided: " << currentSupply << std::endl;
         return false;
@@ -307,7 +290,6 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
             if (!workers->empty()) {
                 auto worker = workers->back();
                 workers->pop_back();
-                worker->stopMining(s);
                 if (worker->startBuilding(bpToBuild, s)) {
                     buildingStarted = true;
                 } else {
@@ -392,6 +374,8 @@ void simulate(std::deque<EntityBP*> &initialUnits) {
 
             // timestep 3
             checkActions(curState.muleActions, curState);
+            checkActions(curState.injectActions, curState);
+            checkActions(curState.chronoActions, curState);
             bool canBuild = !checkAndRunAbilities(curState);
 
             // timestep 3.5: maybe build something
@@ -404,19 +388,19 @@ void simulate(std::deque<EntityBP*> &initialUnits) {
                     // find a non-busy entity to upgrade/morph
                     curState.iterEntities([&](EntityInst &ent) {
 
-                        if (buildStarted)
+                            if (buildStarted)
                             return;
 
-                        buildStarted = ent.startMorphing(buildNext, curState);
-                    });
+                            buildStarted = ent.startMorphing(buildNext, curState);
+                            });
                 } else if(unit != nullptr) {
                     // find a building where we can build the unit
                     curState.iterEntities([&](EntityInst &ent) {
-                        auto building = dynamic_cast<BuildingInst*>(&ent);
-                        if (buildStarted || building == nullptr)
+                            auto building = dynamic_cast<BuildingInst*>(&ent);
+                            if (buildStarted || building == nullptr)
                             return;
-                        buildStarted = building->produceUnit(unit, curState);
-                    });
+                            buildStarted = building->produceUnit(unit, curState);
+                            });
                 } else {
                     // have redistributeWorkers() build the building
                     workerTask = dynamic_cast<BuildingBP*>(buildNext);

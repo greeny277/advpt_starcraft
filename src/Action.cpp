@@ -7,11 +7,11 @@
 
 Action::Action(int startPoint_, int timeToFinish_) :
     startPoint(startPoint_),
-    timeToFinish(timeToFinish_){
+    timeToFinish(timeToFinish_*10){
     }
-void Action::tick() {
-    timeToFinish -= 1;
-    // TODO: Chronoboost Cuong
+void Action::tick(State &) {
+    timeToFinish -= 10;
+
 }
 bool Action::isReady() const { return timeToFinish <= 0; }
 
@@ -36,7 +36,7 @@ nlohmann::json AbilityAction::printStartJSON() {
     j["name"] = name;
     j["triggeredBy"] = std::to_string(triggeredBy);
     if (targetBuilding != -1) {
-        j["targetBuilding"] = targetBuilding;
+        j["targetBuilding"] = std::to_string(targetBuilding);
     }
     return j;
 }
@@ -48,6 +48,28 @@ MuleAction::MuleAction(int startPoint_, int triggeredBy_) :
 void MuleAction::finish(State &s) {
     s.getResources().at(triggeredBy).removeMule();
 }
+
+ChronoAction::ChronoAction(int startPoint_, int triggeredBy_, int targetBuilding_):
+    AbilityAction("chronoboost", triggeredBy_, targetBuilding_ , startPoint_, 20) {
+}
+void ChronoAction::finish(State &s) {
+    ResourceInst *res = dynamic_cast<ResourceInst*>(s.getEntity(targetBuilding));
+    res->stopChronoBoost();
+}
+
+InjectAction::InjectAction(int startPoint_, int triggeredBy_, int targetBuilding_) :
+    AbilityAction("injectlarvae", triggeredBy_, targetBuilding_, startPoint_, 40) {
+}
+
+void InjectAction::finish(State &s){
+    ResourceInst *res = dynamic_cast<ResourceInst*>(s.getEntity(targetBuilding));
+    for ( int i = 0; i < 4; ++i )
+    {
+        res->createLarvae(s);
+    }
+    res->stopInject();
+}
+
 
 BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
         int producedBy_, State &s) :
@@ -89,6 +111,19 @@ void BuildEntityAction::printEndJSON(nlohmann::json& events) {
     events.push_back(j);
 }
 
+void BuildEntityAction::tick(State &s) {
+    if(producedBy != -1 && !isReady()) {
+        ResourceInst *inst = dynamic_cast<ResourceInst*>(s.getEntity(producedBy));
+        if(inst != nullptr) {
+            if (inst->isChronoBoosted()) {
+                timeToFinish-=15;
+                return;
+            }
+        }
+    }
+    Action::tick(s);
+}
+
 void BuildEntityAction::finish(State &s) {
     assert(!wasFinished);
     wasFinished = true;
@@ -104,12 +139,14 @@ void BuildEntityAction::finish(State &s) {
 
     // stop worker to build
     if(worker != -1){
-        s.getWorkers().at(worker).stopBuilding(); // TODO: protoss can go back to mining immediately
+        if(blueprint->getRace() != "protoss") {
+            s.getWorkers().at(worker).stopBuilding();
+        }
     }
     if(producedBy != -1){
         if (producer->isMorphing()) {
             if(auto resource = dynamic_cast<ResourceInst*>(producer)) {
-                s.getResources().at(id).copyRemainingResources(*resource, s);
+                s.getResources().at(id).copyRemainingResources(*resource);
             }
             s.eraseEntity(producedBy);
         } else if (auto building = dynamic_cast<BuildingInst*>(producer)) {

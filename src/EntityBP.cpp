@@ -22,7 +22,14 @@ static std::vector<Ability*> createAbilities(const std::string &name) {
         static MuleAbility muleAbility;
         abilities.push_back(&muleAbility);
     }
-    // TODO inject, chronoboost
+    if (name == "nexus") {
+        static ChronoAbility chronoAbility;
+        abilities.push_back(&chronoAbility);
+    }
+    if (name == "queen") {
+        static InjectAbility injectAbility;
+        abilities.push_back(&injectAbility);
+    }
     return abilities;
 }
 
@@ -82,11 +89,16 @@ BuildingBP::BuildingBP(std::string data[15]) :
 int BuildingBP::newInstance(State &state) const {
     int id;
     if (startResources.getGas() || startResources.getMinerals()) {
-        auto newResource = ResourceInst(this, state.time);
+        auto newResource = ResourceInst(this);
+        if(getName() == "hatchery"){
+            for ( int i = 0; i < 3; ++i ) {
+                newResource.createLarvae(state);
+            }
+        }
         id = newResource.getID();
         state.addResourceInst(newResource);
     } else {
-        auto newBuilding = BuildingInst(this,state.time);
+        auto newBuilding = BuildingInst(this);
         id = newBuilding.getID();
         state.addBuildingInst(newBuilding);
     }

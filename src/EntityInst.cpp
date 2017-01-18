@@ -95,16 +95,11 @@ UnitInst::UnitInst(const UnitBP *unit) :
     EntityInst(unit) {
 }
 
-BuildingInst::BuildingInst(const BuildingBP *building, int buildTime_) :
+BuildingInst::BuildingInst(const BuildingBP *building) :
     EntityInst(building),
-    freeBuildSlots(building->getBuildSlots()),
-    buildTime(buildTime_),
-    chronoBoostActivated(false) {
+    freeBuildSlots(building->getBuildSlots()){
 }
 
-int BuildingInst::getBuildTime() const {
-    return buildTime;
-}
 
 bool BuildingInst::isBusy() const {
     return freeBuildSlots == 0 || EntityInst::isBusy();
@@ -135,13 +130,18 @@ void BuildingInst::incFreeBuildSlots(){
     freeBuildSlots++;
 }
 
-ResourceInst::ResourceInst(const BuildingBP *building, int buildTime_) :
-    BuildingInst(building, buildTime_),
+ResourceInst::ResourceInst(const BuildingBP *building) :
+    BuildingInst(building),
+    timerActive(false),
+    larvaeTimer(0),
+    inject(false),
+    larvaeIds({}),
     remaining(building->startResources),
     miningRate(building->startResources.getGas() > 0 ? Resources(35, 0, 100) : Resources(0, 7, 10)),
     maxWorkerSlots(building->startResources.getGas() > 0 ? 3 : 16),
     activeWorkerSlots(0),
-    activeMuleSlots(0) {
+    activeMuleSlots(0),
+    chronoBoostActivated(false) {
 }
 
 Resources ResourceInst::mine() {
@@ -183,13 +183,83 @@ void ResourceInst::removeMule() {
     activeMuleSlots--;
 }
 
+void ResourceInst::step(State &s){
+    removeMorphingLarvae(s);
+    if(!getFreeLarvaeCount()){
+        stopTimer();
+        return;
+    } else {
+        larvaeTimer = (larvaeTimer+1) % 15;
+        if (larvaeTimer == 0) {
+            createLarvae(s);
+            if(!getFreeLarvaeCount()){
+                stopTimer();
+            }
+        }
+    }
+}
+bool ResourceInst::getFreeLarvaeCount() const{
+    return larvaeIds.size() < 3;
+}
+
+void ResourceInst::createLarvae(State &s){
+    auto larva = static_cast<const UnitBP*>(s.blueprints.at("larva").get());
+    larvaeIds.push_back(larva->newInstance(s));
+}
+
+void ResourceInst::removeMorphingLarvae(State &s){
+    for (auto it = larvaeIds.begin() ; it != larvaeIds.end(); ) {
+        if(s.getEntity(*it)->isMorphing()){
+            it = larvaeIds.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    if (!timerActive){
+        startTimer();
+    }
+}
+
+void ResourceInst::startTimer(){
+    timerActive = true;
+    larvaeTimer = 0;
+}
+
+void ResourceInst::stopTimer(){
+    timerActive = false;
+    larvaeTimer = 0;
+}
+
+void ResourceInst::startChronoBoost() {
+    chronoBoostActivated = true;
+}
+void ResourceInst::stopChronoBoost() {
+    chronoBoostActivated = false;
+}
+
+bool ResourceInst::isChronoBoosted() {
+    return chronoBoostActivated;
+}
+
+bool ResourceInst::canInject(){
+    return !inject;
+}
+
+void ResourceInst::startInject(){
+    inject = true;
+}
+
+void ResourceInst::stopInject(){
+    inject = false;
+}
+
 int ResourceInst::getActiveWorkerCount() const { return activeWorkerSlots; }
 int ResourceInst::getFreeWorkerCount() const { return maxWorkerSlots - activeWorkerSlots; }
 
 bool ResourceInst::isGas() const { return (miningRate * 1000).getGas() > 0; }
 
 bool ResourceInst::isMinerals() const { return (miningRate * 1000).getMinerals() > 0; }
-void ResourceInst::copyRemainingResources(ResourceInst &other, State &s) {
+void ResourceInst::copyRemainingResources(ResourceInst &other) {
     remaining = other.remaining;
     activeMuleSlots = other.activeMuleSlots;
     int workers = other.activeWorkerSlots;
@@ -217,12 +287,15 @@ bool WorkerInst::startBuilding(BuildingBP *bbp, State &s) {
     if (isMorphing()) {
         return false;
     }
-
-    stopMining(s);
+    if(getBlueprint()->getName() != "probe") {
+        stopMining(s);
+    }
     if (!checkBuildRequirements(bbp, s, nullptr) || !bbp->getMorphedFrom().empty()) {
         return false;
     }
-    isBuilding = true;
+    if(getBlueprint()->getName() != "probe") {
+        isBuilding = true;
+    }
     s.buildActions.push_back(BuildEntityAction(bbp, getID(), -1, s));
     return true;
 }
@@ -244,6 +317,6 @@ bool WorkerInst::isMiningMinerals(State &s) const {
     return s.getResources().at(workingResource).isMinerals();
 }
 
-bool WorkerInst::isAssignedTo(int id) const {
-    return id == workingResource;
+bool WorkerInst::isAssignedTo(int id_) const {
+    return id_ == workingResource;
 }
