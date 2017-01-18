@@ -4,6 +4,7 @@ set -e
 set -u
 #set -o pipefail
 
+rm submission.zip
 zip submission.zip *.cpp *.h *.hpp build.sh forwardSim.sh optimize.sh *.csv CMakeLists.txt
 
 curl 'https://www10.cs.fau.de/advptSC2/forwardSimulation/submission' --form 'groupName=Team Blau' --form terran=on --form protoss=on --form zerg=on --form code=@submission.zip --form comment= --compressed > /dev/null
