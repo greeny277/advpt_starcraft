@@ -255,7 +255,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
     }
 
     if(neededSupply > currentSupply) {
-        std::cout << "not enough supplies to build new units, needed: " << neededSupply << " provided: " << currentSupply << std::endl;
+        std::cerr << "not enough supplies to build new units, needed: " << neededSupply << " provided: " << currentSupply << std::endl;
         return false;
     }
     return true;
