@@ -26,7 +26,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s, const UnitBP
     // check if this building can produce the unit. Therefore get list of buildings which
     // can produce the entity and check if this building is one of them
     const auto &buildingNames = entity->getProducedByOneOf();
-    if (!buildingNames.empty() && buildingNames.find(getBlueprint()->getName()) == buildingNames.end()) {
+    if (!buildingNames.empty() && std::find(buildingNames.begin(), buildingNames.end(), getBlueprint()->getName()) == buildingNames.end()) {
         // this building can not produce the unit
         return false;
     }

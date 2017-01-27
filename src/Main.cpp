@@ -7,6 +7,7 @@
 #include <fstream>
 #include <queue>
 #include <string>
+#include <random>
 
 #include "json.hpp"
 
@@ -149,8 +150,7 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     message["events"] = events;
     messages.push_back(message);
 }
-static nlohmann::json getInitialJSON(const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints,
-        const std::string &race,
+static nlohmann::json getInitialJSON(const std::string &race,
         bool valid) {
     nlohmann::json j;
     std::string game("sc2-hots-");
@@ -335,7 +335,7 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
 static void simulate(std::deque<EntityBP*> &initialUnits, std::string &race) {
     bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race, blueprints);
-    nlohmann::json j = getInitialJSON(blueprints, race, valid);
+    nlohmann::json j = getInitialJSON(race, valid);
 
     std::queue<EntityBP*> buildOrder(initialUnits);
 
@@ -415,8 +415,7 @@ static void simulate(std::deque<EntityBP*> &initialUnits, std::string &race) {
         if (!buildOrder.empty()) {
             std::cerr << "Build order could not be finished." << std::endl;
             valid = false;
-            //j["buildlistValid"] = 0;
-            // TODO: activate this
+            j["buildlistValid"] = 0;
             valid = false;
         } else {
             j["messages"] = messages;
@@ -431,6 +430,233 @@ static void simulate(std::deque<EntityBP*> &initialUnits, std::string &race) {
     exit(EXIT_FAILURE);
 }
 
+struct fitness {
+    int targetCount;
+    int earliestTargetTime;
+    unsigned long workerCount;
+    int uniqueProducingCount;
+};
+static struct fitness get_fitness(std::vector<State> &states, UnitBP* targetBP) {
+    struct fitness res = {
+        0,
+        -1,
+        states.back().getWorkers().size(),
+        0,
+    };
+
+    int duration = -1;
+    for (size_t i = 0; i < states.size(); i++) {
+        for (auto &unit : states[i].getUnits()) {
+            if (unit.second.getBlueprint() == targetBP) {
+                duration = states[i].time;
+                break;
+            }
+        }
+        if (duration != -1)
+            break;
+    }
+
+    int uniqueProducingCount = 0;
+    std::unordered_set<const BuildingBP*> buildings;
+    int targetCount;
+    for (auto &b : states.back().getBuildings()) {
+        if (buildings.insert(static_cast<const BuildingBP*>(b.second.getBlueprint())).second) {
+            uniqueProducingCount++;
+        }
+    }
+
+    return res;
+}
+
+struct dependency_edge {
+    size_t weight;
+    EntityBP *entity;
+};
+
+static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDependencyGraph(UnitBP *targetBP, size_t count) {
+    std::unordered_map<EntityBP *, std::vector<dependency_edge>> dep_graph;
+
+    auto insert_dep = [&] (EntityBP* parent, dependency_edge e) {
+        if (dep_graph.find(parent) == dep_graph.end()) {
+            dep_graph.emplace(parent, std::vector<dependency_edge>{ e });
+        } else {
+            dep_graph.at(parent).push_back(e);
+        }
+    };
+
+    BuildingBP *gasBuilding;
+    if (targetBP->getRace() == "zerg") {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("extractor").get());
+    } else if (targetBP->getRace() == "terran") {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("refinery").get());
+    } else {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("assimilator").get());
+    }
+
+    std::deque<dependency_edge> worklist{{count, targetBP}};
+    std::unordered_set<EntityBP*> visited;
+    while (!worklist.empty()) {
+        dependency_edge cur = worklist.front();
+        visited.insert(cur.entity);
+        if (!cur.entity->getRequireOneOf().empty()) {
+            auto front = blueprints.at(*cur.entity->getRequireOneOf().begin()).get();
+            insert_dep(front, {cur.weight, cur.entity });
+            if (visited.find(front) != visited.end())
+                worklist.push_back({0, front});
+        }
+        if (!cur.entity->getProducedByOneOf().empty()) {
+            auto front = blueprints.at(*cur.entity->getProducedByOneOf().begin()).get();
+            insert_dep(front, { cur.weight, cur.entity });
+            if (visited.find(front) != visited.end())
+                worklist.push_back({0, front});
+        }
+        if (!cur.entity->getMorphedFrom().empty()) {
+            auto front = blueprints.at(*cur.entity->getMorphedFrom().begin()).get();
+            insert_dep(front, { cur.weight, cur.entity });
+            if (visited.find(front) != visited.end())
+                worklist.push_back({ cur.weight, front});
+        }
+
+        if (cur.entity->getCosts().getGas() > 0) {
+            insert_dep(gasBuilding, { 0, cur.entity});
+        }
+        worklist.pop_front();
+    }
+    return dep_graph;
+}
+
+static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
+    std::mt19937 gen(1337);
+
+    UnitBP *worker;
+    EntityBP *abilityDependency;
+    EntityBP *abilityEntity;
+    EntityBP *supplyEntity;
+    BuildingBP *mainBuilding;
+    if (targetBP->getRace() == "zerg") {
+        worker = static_cast<UnitBP*>(blueprints.at("drone").get());
+        abilityDependency = blueprints.at("spawning_pool").get();
+        abilityEntity = blueprints.at("queen").get();
+        supplyEntity = blueprints.at("overlord").get();
+        mainBuilding = static_cast<BuildingBP*>(blueprints.at("hatchery").get());
+    } else if (targetBP->getRace() == "terran") {
+        worker = static_cast<UnitBP*>(blueprints.at("scv").get());
+        abilityDependency = blueprints.at("barracks").get();
+        abilityEntity = blueprints.at("orbital_command").get();
+        supplyEntity = blueprints.at("supply_depot").get();
+        mainBuilding = static_cast<BuildingBP*>(blueprints.at("command_center").get());
+    } else {
+        worker = static_cast<UnitBP*>(blueprints.at("probe").get());
+        abilityDependency = nullptr;
+        abilityEntity = nullptr;
+        supplyEntity = blueprints.at("pylon").get();
+        mainBuilding = static_cast<BuildingBP*>(blueprints.at("nexus").get());
+    }
+
+    std::vector<EntityBP*> buildlist;
+    for (size_t j = 0; j < 10; j++) {
+        buildlist.push_back(worker);
+    }
+    std::unordered_set<std::string> alreadyBuilt;
+    alreadyBuilt.insert(worker->getName());
+    alreadyBuilt.insert(mainBuilding->getName());
+    if (targetBP->getRace() == "zerg") {
+        alreadyBuilt.insert("overlord");
+        alreadyBuilt.insert("larva");
+    }
+
+    std::deque<EntityBP*> worklist;
+    worklist.push_front(mainBuilding);
+    while (!worklist.empty()) {
+        auto cur = worklist.front();
+        worklist.pop_front();
+        if (dep_graph.find(cur) == dep_graph.end())
+            continue;
+
+        auto &edges = dep_graph.at(cur);
+        if (edges.empty())
+            continue;
+
+        std::uniform_int_distribution<> dis(0, edges.size() - 1);
+        do {
+            int i = dis(gen);
+            auto &edge = edges[i];
+            bool found = false;
+            for (auto &req : edge.entity->getRequireOneOf()) {
+                if (alreadyBuilt.find(req) != alreadyBuilt.end())
+                    found = true;
+            }
+            if (!found && !edge.entity->getRequireOneOf().empty())
+                continue;
+            found = false;
+            for (auto &req : edge.entity->getProducedByOneOf()) {
+                if (alreadyBuilt.find(req) != alreadyBuilt.end())
+                    found = true;
+            }
+            if (!found && !edge.entity->getProducedByOneOf().empty())
+                continue;
+            found = false;
+            for (auto &req : edge.entity->getMorphedFrom()) {
+                if (alreadyBuilt.find(req) != alreadyBuilt.end())
+                    found = true;
+            }
+            if (!found && !edge.entity->getMorphedFrom().empty())
+                continue;
+
+            if (alreadyBuilt.find(edge.entity->getName()) != alreadyBuilt.end() && edge.weight == 0)
+                continue;
+
+            for (size_t j = 0; j < edge.weight || (j == 0 && edge.weight == 0); j++) {
+                buildlist.push_back(edge.entity);
+            }
+            alreadyBuilt.insert(edge.entity->getName());
+            worklist.push_back(edge.entity);
+            break;
+        } while(true);
+    }
+
+    int availSupply = 0, usedSupply = 0; // TODO: fix the start numbers
+    bool hasAbilityDep = false;
+    for (size_t i = 0; i < buildlist.size(); i++) {
+        auto cur = buildlist[i];
+
+        if (!hasAbilityDep && cur == abilityDependency) {
+            hasAbilityDep = true;
+            buildlist.insert(buildlist.begin() + i+1, abilityEntity);
+        }
+
+        if (auto unit = dynamic_cast<UnitBP*>(cur)) {
+            if (usedSupply + unit->getSupplyCost() > availSupply) {
+                buildlist.insert(buildlist.begin() + i, supplyEntity);
+                i--;
+            }
+        }
+        availSupply = std::min(availSupply + cur->getSupplyProvided(), 2000);
+
+        if (auto res = dynamic_cast<BuildingBP*>(cur)) {
+            if (res->startResources.getGas() > 0) {
+                buildlist.insert(buildlist.begin() + i+1, worker);
+                buildlist.insert(buildlist.begin() + i+1, worker);
+                buildlist.insert(buildlist.begin() + i+1, worker);
+            } else if (res->startResources.getMinerals() > 0) {
+                for (size_t j = 0; j < 16; j++) {
+                    buildlist.insert(buildlist.begin() + i+1, worker);
+                }
+                if (hasAbilityDep) {
+                    buildlist.insert(buildlist.begin() + i+1, abilityEntity);
+                }
+            }
+
+            // add one drone for every zerg building
+            if (cur->getRace() == "zerg") {
+                usedSupply -= 1;
+                buildlist.insert(buildlist.begin() + i+1, worker);
+            }
+        }
+    }
+    return buildlist;
+}
+
 int main(int argc, char *argv[]) {
     if (std::strcmp(argv[1], "forward") == 0 && argc >= 4) {
         std::string race(argv[2]);
@@ -442,11 +668,15 @@ int main(int argc, char *argv[]) {
             simulate(initialUnits, race);
         }
     } else if (std::strcmp(argv[1], "rush") == 0 && argc == 4) {
-        auto &unitBP = blueprints.at(argv[2]);
+        auto unitBP = blueprints.at(argv[2]).get();
         int timeout = std::atoi(argv[3]);
     } else if (std::strcmp(argv[1], "push") == 0 && argc == 4) {
-        auto &unitBP = blueprints.at(argv[2]);
+        auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         int count = std::atoi(argv[3]);
+        auto dep_graph = generateDependencyGraph(unitBP, count);
+        auto buildList = generateRandomBuildlist(unitBP, dep_graph);
+        for (auto &e : buildList)
+            std::cout << e->getName() << std::endl;
     } else {
         usage(argv);
     }
