@@ -1,5 +1,7 @@
 .*.swp
 *.o
 *.pdf
+*.ps
 build
 *.zip
+*.dot
