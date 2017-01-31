@@ -496,7 +496,15 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
         if (dep_graph.find(parent) == dep_graph.end()) {
             dep_graph.emplace(parent, std::vector<dependency_edge>{ e });
         } else {
-            dep_graph.at(parent).push_back(e);
+            auto iter = std::find_if(dep_graph.at(parent).begin(), dep_graph.at(parent).end(), 
+                ([&](dependency_edge &cur) {
+                    return (cur.entity == e.entity);
+                })
+            );
+            if(iter == dep_graph.at(parent).end())
+                dep_graph.at(parent).push_back(e);
+            else
+                iter->weight += e.weight;
         }
     };
 
@@ -507,7 +515,7 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
         visited.insert(cur.entity);
         if (!cur.entity->getRequireOneOf().empty()) {
             auto front = blueprints.at(*cur.entity->getRequireOneOf().begin()).get();
-            insert_dep(front, {cur.weight, cur.entity });
+            insert_dep(front, {0, cur.entity });
             if (visited.find(front) == visited.end())
                 worklist.push_back({0, front});
         }
@@ -519,15 +527,16 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
         }
         if (!cur.entity->getMorphedFrom().empty()) {
             auto front = blueprints.at(*cur.entity->getMorphedFrom().begin()).get();
-            insert_dep(front, { cur.weight, cur.entity });
-            if (visited.find(front) == visited.end())
-                worklist.push_back({ cur.weight, front});
+            insert_dep(front, { std::max(1lu,cur.weight), cur.entity });
+            //if (visited.find(front) == visited.end())
+            if (cur.entity != mainBuilding)
+                worklist.push_back({ std::max(1lu,cur.weight), front});
         }
 
         if (cur.entity->getCosts().getGas() > 0) {
             insert_dep(gasBuilding, { 0, cur.entity});
             if (visited.find(gasBuilding) == visited.end())
-                worklist.push_back({ cur.weight, gasBuilding});
+                worklist.push_back({ 0, gasBuilding});
         }
 
         worklist.pop_front();
@@ -703,7 +712,7 @@ int main(int argc, char *argv[]) {
             std::cout << e->getName() << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
-        auto dep_graph = generateDependencyGraph(unitBP, 1);
+        auto dep_graph = generateDependencyGraph(unitBP, 4);
         dumpDepGraph(dep_graph);
     } else {
         usage(argv);
