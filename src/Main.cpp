@@ -18,6 +18,7 @@
 #include "Ability.h"
 #include "Helper.h"
 
+
 std::unordered_map<std::string, std::unique_ptr<EntityBP>> readConfig() {
     std::unordered_map<std::string, std::unique_ptr<EntityBP>> res;
 
@@ -556,6 +557,86 @@ static void dumpDepGraph(std::unordered_map<EntityBP *, std::vector<dependency_e
     }
     std::cout << "}";
 }
+static void dumpAdjGraph(std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> adj_graph) {
+    std::cout << "digraph {";
+    for(int i = 0; i < 1000; i++) {
+        for(int j =0; j < 1000;j++) {
+            if(adj_graph.second[i*1000+j]) {
+            std::cout << adj_graph.first[i]->getName() << i <<
+                " -> " <<
+                adj_graph.first[j]->getName() << j <<
+                ";";
+            }
+        }
+    }
+    std::cout << "}";
+}
+
+
+static std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graphtransformation(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
+    std::array<EntityBP*,1000> entities;
+    entities.fill(0);
+    std::array<bool,1000*1000> adjacencies;
+    adjacencies.fill(0);
+    std::deque<size_t> worklist;
+    worklist.push_back(0);
+    size_t nodeCount = 1;
+    std::string race = dep_graph.begin()->second.front().entity->getRace();
+    if(race == "zerg") {
+        entities[0] = static_cast<UnitBP*>(blueprints.at("hatchery").get());
+    }
+    if(race == "terran") {
+        entities[0] = static_cast<UnitBP*>(blueprints.at("command_center").get());
+    }
+    if(race == "protoss") {
+        entities[0] = static_cast<UnitBP*>(blueprints.at("nexus").get());
+    }
+    while(!worklist.empty()) {
+        auto cur = worklist.front();
+        worklist.pop_front();
+        auto edges = dep_graph.find(entities[cur]);
+        if(edges == dep_graph.end()) {
+            continue;
+        }
+        for(auto &edge: edges->second){
+            if(edge.weight > 0 && edge.weight != 0xbadf00d) {
+                auto &morphFroms = edge.entity->getMorphedFrom();
+                if(std::find(morphFroms.begin(), morphFroms.end(), entities[cur]->getName()) != morphFroms.end()){
+                    edge.weight = edge.weight == 1 ? 0xbadf00d : edge.weight - 1;
+                    worklist.push_back(nodeCount);
+                    entities[nodeCount] = edge.entity;
+                    adjacencies[1000*cur + nodeCount] = true;
+                    nodeCount++;
+                    break;
+                } else { 
+                    for(size_t i = 0; i < edge.weight; i++) {
+                        worklist.push_back(nodeCount);
+                        entities[nodeCount] = edge.entity;
+                        adjacencies[1000*cur + nodeCount] = true;
+                        nodeCount++;
+                    }
+                }
+
+            }
+        }
+    }
+
+    for(size_t i = 0;i < nodeCount; i++) {
+        auto edges = dep_graph.find(entities[i]);
+        if(edges == dep_graph.end()) {
+            continue;
+        }
+        for(size_t j = 0; j < nodeCount; j++) {
+            for(auto & edge : edges->second) {
+                if(edge.weight == 0 && edge.entity == entities[j]) {
+                    adjacencies[1000*i+j] = true;
+                }
+            }
+        }
+    }
+    return {entities, adjacencies};
+}
+
 
 static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
     std::mt19937 gen(1337);
@@ -611,9 +692,9 @@ static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::uno
             continue;
 
         std::uniform_int_distribution<> dis(0, edges.size() - 1);
-        do {
-            int i = dis(gen);
-            auto &edge = edges[i];
+        int start = dis(gen);
+        for(size_t i = 0; i < edges.size(); i++) {
+            auto &edge = edges[(i+start)%edges.size()];
             bool found = false;
             for (auto &req : edge.entity->getRequireOneOf()) {
                 if (alreadyBuilt.find(req) != alreadyBuilt.end())
@@ -645,7 +726,7 @@ static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::uno
             alreadyBuilt.insert(edge.entity->getName());
             worklist.push_back(edge.entity);
             break;
-        } while(true);
+        }
     }
 
     int availSupply = 0, usedSupply = 0; // TODO: fix the start numbers
@@ -713,7 +794,8 @@ int main(int argc, char *argv[]) {
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         auto dep_graph = generateDependencyGraph(unitBP, 4);
-        dumpDepGraph(dep_graph);
+       // dumpDepGraph(dep_graph);
+        dumpAdjGraph(graphtransformation(dep_graph));
     } else {
         usage(argv);
     }
