@@ -476,22 +476,29 @@ struct dependency_edge {
 static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDependencyGraph(UnitBP *targetBP, size_t count) {
     std::unordered_map<EntityBP *, std::vector<dependency_edge>> dep_graph;
 
+    BuildingBP *gasBuilding;
+    BuildingBP *mainBuilding;
+    if (targetBP->getRace() == "zerg") {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("extractor").get());
+        mainBuilding = static_cast<BuildingBP*>(blueprints.at("hatchery").get());
+    } else if (targetBP->getRace() == "terran") {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("refinery").get());
+        mainBuilding = static_cast<BuildingBP*>(blueprints.at("command_center").get());
+    } else {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("assimilator").get());
+        mainBuilding = static_cast<BuildingBP*>(blueprints.at("nexus").get());
+    }
+
     auto insert_dep = [&] (EntityBP* parent, dependency_edge e) {
+        if (e.entity == mainBuilding)
+            return;
+
         if (dep_graph.find(parent) == dep_graph.end()) {
             dep_graph.emplace(parent, std::vector<dependency_edge>{ e });
         } else {
             dep_graph.at(parent).push_back(e);
         }
     };
-
-    BuildingBP *gasBuilding;
-    if (targetBP->getRace() == "zerg") {
-        gasBuilding = static_cast<BuildingBP*>(blueprints.at("extractor").get());
-    } else if (targetBP->getRace() == "terran") {
-        gasBuilding = static_cast<BuildingBP*>(blueprints.at("refinery").get());
-    } else {
-        gasBuilding = static_cast<BuildingBP*>(blueprints.at("assimilator").get());
-    }
 
     std::deque<dependency_edge> worklist{{count, targetBP}};
     std::unordered_set<EntityBP*> visited;
@@ -501,28 +508,44 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
         if (!cur.entity->getRequireOneOf().empty()) {
             auto front = blueprints.at(*cur.entity->getRequireOneOf().begin()).get();
             insert_dep(front, {cur.weight, cur.entity });
-            if (visited.find(front) != visited.end())
+            if (visited.find(front) == visited.end())
                 worklist.push_back({0, front});
         }
         if (!cur.entity->getProducedByOneOf().empty()) {
             auto front = blueprints.at(*cur.entity->getProducedByOneOf().begin()).get();
             insert_dep(front, { cur.weight, cur.entity });
-            if (visited.find(front) != visited.end())
+            if (visited.find(front) == visited.end())
                 worklist.push_back({0, front});
         }
         if (!cur.entity->getMorphedFrom().empty()) {
             auto front = blueprints.at(*cur.entity->getMorphedFrom().begin()).get();
             insert_dep(front, { cur.weight, cur.entity });
-            if (visited.find(front) != visited.end())
+            if (visited.find(front) == visited.end())
                 worklist.push_back({ cur.weight, front});
         }
 
         if (cur.entity->getCosts().getGas() > 0) {
             insert_dep(gasBuilding, { 0, cur.entity});
+            if (visited.find(gasBuilding) == visited.end())
+                worklist.push_back({ cur.weight, gasBuilding});
         }
+
         worklist.pop_front();
     }
     return dep_graph;
+}
+static void dumpDepGraph(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
+    std::cout << "digraph {";
+    for (auto &entr : dep_graph) {
+        for (auto &dep : entr.second) {
+            std::cout << entr.first->getName() <<
+                " -> " <<
+                dep.entity->getName() <<
+                "[label=\"" << dep.weight << "\"]" <<
+                ";";
+        }
+    }
+    std::cout << "}";
 }
 
 static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
@@ -567,6 +590,7 @@ static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::uno
 
     std::deque<EntityBP*> worklist;
     worklist.push_front(mainBuilding);
+    worklist.push_front(worker);
     while (!worklist.empty()) {
         auto cur = worklist.front();
         worklist.pop_front();
@@ -604,7 +628,7 @@ static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::uno
                 continue;
 
             if (alreadyBuilt.find(edge.entity->getName()) != alreadyBuilt.end() && edge.weight == 0)
-                continue;
+                break;
 
             for (size_t j = 0; j < edge.weight || (j == 0 && edge.weight == 0); j++) {
                 buildlist.push_back(edge.entity);
@@ -658,7 +682,7 @@ static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::uno
 }
 
 int main(int argc, char *argv[]) {
-    if (std::strcmp(argv[1], "forward") == 0 && argc >= 4) {
+    if (argc >= 4 && std::strcmp(argv[1], "forward") == 0) {
         std::string race(argv[2]);
         for (int i = 3; i < argc; i++) {
             auto initialUnits = readBuildOrder(blueprints, argv[i]);
@@ -667,16 +691,20 @@ int main(int argc, char *argv[]) {
             }
             simulate(initialUnits, race);
         }
-    } else if (std::strcmp(argv[1], "rush") == 0 && argc == 4) {
+    } else if (argc == 4 && std::strcmp(argv[1], "rush") == 0) {
         auto unitBP = blueprints.at(argv[2]).get();
         int timeout = std::atoi(argv[3]);
-    } else if (std::strcmp(argv[1], "push") == 0 && argc == 4) {
+    } else if (argc == 4 && std::strcmp(argv[1], "push") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         int count = std::atoi(argv[3]);
         auto dep_graph = generateDependencyGraph(unitBP, count);
         auto buildList = generateRandomBuildlist(unitBP, dep_graph);
         for (auto &e : buildList)
             std::cout << e->getName() << std::endl;
+    } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
+        auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
+        auto dep_graph = generateDependencyGraph(unitBP, 1);
+        dumpDepGraph(dep_graph);
     } else {
         usage(argv);
     }
