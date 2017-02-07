@@ -544,7 +544,7 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
     return dep_graph;
 }
 static void dumpDepGraph(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
-    std::cout << "digraph {";
+    std::cout << "subgraph cluster_depend{";
     for (auto &entr : dep_graph) {
         for (auto &dep : entr.second) {
             std::cout << entr.first->getName() <<
@@ -557,7 +557,7 @@ static void dumpDepGraph(std::unordered_map<EntityBP *, std::vector<dependency_e
     std::cout << "}";
 }
 static void dumpAdjGraph(std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> adj_graph) {
-    std::cout << "digraph {";
+    std::cout << "subgraph cluster_adj{";
     for(int i = 0; i < 1000; i++) {
         for(int j =0; j < 1000;j++) {
             if(adj_graph.second[i*1000+j]) {
@@ -571,6 +571,33 @@ static void dumpAdjGraph(std::pair<std::array<EntityBP*,1000>, std::array<bool,1
     std::cout << "}";
 }
 
+static void weightFixing(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
+    std::unordered_map<EntityBP *, std::pair<size_t, dependency_edge&>> incoming_edges;
+
+    for (auto &entr : dep_graph) {
+        for (dependency_edge &dep : entr.second) {
+            auto p = incoming_edges.find(dep.entity);
+            if( p != incoming_edges.end()){
+                std::pair<size_t,dependency_edge&> value(dep.weight+p->second.first, dep);
+                incoming_edges.erase(p);
+                std::pair<EntityBP *, std::pair<size_t, dependency_edge &>> elem = std::make_pair(dep.entity, value);
+                incoming_edges.insert(elem);
+            } else {
+                std::pair<size_t,dependency_edge&> value(dep.weight, dep);
+                std::pair<EntityBP *, std::pair<size_t, dependency_edge &>> elem = std::make_pair(dep.entity, value);
+                incoming_edges.insert(elem);
+            }
+        }
+    }
+
+    for(auto &p : incoming_edges){
+        if(p.second.first == 0){
+            p.second.second.weight = 1;
+        }
+    }
+
+    return;
+}
 
 static std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graphtransformation(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
     std::array<EntityBP*,1000> entities;
@@ -582,13 +609,13 @@ static std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graphtr
     size_t nodeCount = 1;
     std::string race = dep_graph.begin()->second.front().entity->getRace();
     if(race == "zerg") {
-        entities[0] = static_cast<UnitBP*>(blueprints.at("hatchery").get());
+        entities[0] = blueprints.at("hatchery").get();
     }
     if(race == "terran") {
-        entities[0] = static_cast<UnitBP*>(blueprints.at("command_center").get());
+        entities[0] = blueprints.at("command_center").get();
     }
     if(race == "protoss") {
-        entities[0] = static_cast<UnitBP*>(blueprints.at("nexus").get());
+        entities[0] = blueprints.at("nexus").get();
     }
     while(!worklist.empty()) {
         auto cur = worklist.front();
@@ -607,7 +634,7 @@ static std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graphtr
                     adjacencies[1000*cur + nodeCount] = true;
                     nodeCount++;
                     break;
-                } else { 
+                } else {
                     for(size_t i = 0; i < edge.weight; i++) {
                         worklist.push_back(nodeCount);
                         entities[nodeCount] = edge.entity;
@@ -793,8 +820,11 @@ int main(int argc, char *argv[]) {
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         auto dep_graph = generateDependencyGraph(unitBP, 4);
-        //dumpDepGraph(dep_graph);
+        weightFixing(dep_graph);
+        std::cout << "digraph {";
+        dumpDepGraph(dep_graph);
         dumpAdjGraph(graphtransformation(dep_graph));
+        std::cout << "}";
     } else {
         usage(argv);
     }
