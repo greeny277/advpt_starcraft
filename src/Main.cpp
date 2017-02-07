@@ -490,7 +490,11 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
         mainBuilding = static_cast<BuildingBP*>(blueprints.at("nexus").get());
     }
 
-    auto insert_dep = [&] (EntityBP* parent, dependency_edge e) {
+    std::deque<dependency_edge> worklist{{count, targetBP}};
+    std::unordered_set<EntityBP*> visited;
+    visited.insert(targetBP);
+
+    auto insert_dep = [&] (EntityBP* parent, dependency_edge e, bool morph) {
         if (e.entity == mainBuilding)
             return;
 
@@ -507,37 +511,32 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
             else
                 iter->weight += e.weight;
         }
+        if (!morph && visited.find(parent) == visited.end())
+            worklist.push_back({0, parent});
+
+        visited.insert(parent);
     };
 
-    std::deque<dependency_edge> worklist{{count, targetBP}};
-    std::unordered_set<EntityBP*> visited;
     while (!worklist.empty()) {
         dependency_edge cur = worklist.front();
-        visited.insert(cur.entity);
         if (!cur.entity->getRequireOneOf().empty()) {
             auto front = blueprints.at(*cur.entity->getRequireOneOf().begin()).get();
-            insert_dep(front, {0, cur.entity });
-            if (visited.find(front) == visited.end())
-                worklist.push_back({0, front});
+            insert_dep(front, {0, cur.entity }, false);
         }
         if (!cur.entity->getProducedByOneOf().empty()) {
             auto front = blueprints.at(*cur.entity->getProducedByOneOf().begin()).get();
-            insert_dep(front, { cur.weight, cur.entity });
-            if (visited.find(front) == visited.end())
-                worklist.push_back({0, front});
+            insert_dep(front, { cur.weight, cur.entity }, false);
         }
         if (!cur.entity->getMorphedFrom().empty()) {
             auto front = blueprints.at(*cur.entity->getMorphedFrom().begin()).get();
-            insert_dep(front, { std::max(1lu,cur.weight), cur.entity });
+            insert_dep(front, { std::max(1lu,cur.weight), cur.entity }, true);
             //if (visited.find(front) == visited.end())
             if (cur.entity != mainBuilding)
                 worklist.push_back({ std::max(1lu,cur.weight), front});
         }
 
         if (cur.entity->getCosts().getGas() > 0) {
-            insert_dep(gasBuilding, { 0, cur.entity});
-            if (visited.find(gasBuilding) == visited.end())
-                worklist.push_back({ 0, gasBuilding});
+            insert_dep(gasBuilding, { 0, cur.entity}, false);
         }
 
         worklist.pop_front();
@@ -794,7 +793,7 @@ int main(int argc, char *argv[]) {
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         auto dep_graph = generateDependencyGraph(unitBP, 4);
-       // dumpDepGraph(dep_graph);
+        //dumpDepGraph(dep_graph);
         dumpAdjGraph(graphtransformation(dep_graph));
     } else {
         usage(argv);
