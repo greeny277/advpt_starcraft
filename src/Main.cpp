@@ -662,29 +662,65 @@ static std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graphtr
     }
     return {entities, adjacencies};
 }
+// edges:  s*1000 + d
+static std::vector<EntityBP*> topSort(std::mt19937 &gen, std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graph) {
+    std::vector<EntityBP*> sort;
+    std::vector<size_t> start_nodes{0};
+    std::uniform_int_distribution<> dis_1k(0, 999);
 
+    while (!start_nodes.empty()) {
+        std::uniform_int_distribution<> dis(0, start_nodes.size() - 1);
+        std::swap(start_nodes[dis(gen)], start_nodes.back());
+        size_t node = start_nodes.back();
+        start_nodes.pop_back();
+        sort.push_back(graph.first[node]);
+        size_t edge_dest = 0;
+        size_t rand_offset = dis_1k(gen);
+        for (size_t i = 0; i < 1000; i++) {
+            size_t idx = ((i + rand_offset) % 1000);
+            if (graph.second[node*1000+idx]) {
+                edge_dest = idx;
+                graph.second[node*1000+idx] = false;
+                bool other_edge = false;
+                for (size_t j = 0; edge_dest != 0 && j < 1000; j++) {
+                    if (graph.second[j*1000+edge_dest]) {
+                        other_edge = true;
+                        break;
+                    }
+                }
+                if (edge_dest != 0 && !other_edge) {
+                    start_nodes.push_back(edge_dest);
+                }
+            }
+        }
+    }
 
-static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
-    std::mt19937 gen(1337);
-
+    return sort;
+}
+static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> buildlist, EntityBP *targetBP, int targetCount) {
     UnitBP *worker;
     EntityBP *abilityDependency;
     EntityBP *abilityEntity;
     EntityBP *supplyEntity;
     BuildingBP *mainBuilding;
+    BuildingBP *productionEntity;
+    BuildingBP *gasBuilding;
     if (targetBP->getRace() == "zerg") {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("extractor").get());
         worker = static_cast<UnitBP*>(blueprints.at("drone").get());
         abilityDependency = blueprints.at("spawning_pool").get();
         abilityEntity = blueprints.at("queen").get();
         supplyEntity = blueprints.at("overlord").get();
         mainBuilding = static_cast<BuildingBP*>(blueprints.at("hatchery").get());
     } else if (targetBP->getRace() == "terran") {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("refinery").get());
         worker = static_cast<UnitBP*>(blueprints.at("scv").get());
         abilityDependency = blueprints.at("barracks").get();
         abilityEntity = blueprints.at("orbital_command").get();
         supplyEntity = blueprints.at("supply_depot").get();
         mainBuilding = static_cast<BuildingBP*>(blueprints.at("command_center").get());
     } else {
+        gasBuilding = static_cast<BuildingBP*>(blueprints.at("assimilator").get());
         worker = static_cast<UnitBP*>(blueprints.at("probe").get());
         abilityDependency = nullptr;
         abilityEntity = nullptr;
@@ -692,110 +728,71 @@ static std::vector<EntityBP*> generateRandomBuildlist(UnitBP *targetBP, std::uno
         mainBuilding = static_cast<BuildingBP*>(blueprints.at("nexus").get());
     }
 
-    std::vector<EntityBP*> buildlist;
-    for (size_t j = 0; j < 10; j++) {
-        buildlist.push_back(worker);
-    }
-    std::unordered_set<std::string> alreadyBuilt;
-    alreadyBuilt.insert(worker->getName());
-    alreadyBuilt.insert(mainBuilding->getName());
-    if (targetBP->getRace() == "zerg") {
-        alreadyBuilt.insert("overlord");
-        alreadyBuilt.insert("larva");
-    }
-
-    std::deque<EntityBP*> worklist;
-    worklist.push_front(mainBuilding);
-    worklist.push_front(worker);
-    while (!worklist.empty()) {
-        auto cur = worklist.front();
-        worklist.pop_front();
-        if (dep_graph.find(cur) == dep_graph.end())
-            continue;
-
-        auto &edges = dep_graph.at(cur);
-        if (edges.empty())
-            continue;
-
-        std::uniform_int_distribution<> dis(0, edges.size() - 1);
-        int start = dis(gen);
-        for(size_t i = 0; i < edges.size(); i++) {
-            auto &edge = edges[(i+start)%edges.size()];
-            bool found = false;
-            for (auto &req : edge.entity->getRequireOneOf()) {
-                if (alreadyBuilt.find(req) != alreadyBuilt.end())
-                    found = true;
-            }
-            if (!found && !edge.entity->getRequireOneOf().empty())
-                continue;
-            found = false;
-            for (auto &req : edge.entity->getProducedByOneOf()) {
-                if (alreadyBuilt.find(req) != alreadyBuilt.end())
-                    found = true;
-            }
-            if (!found && !edge.entity->getProducedByOneOf().empty())
-                continue;
-            found = false;
-            for (auto &req : edge.entity->getMorphedFrom()) {
-                if (alreadyBuilt.find(req) != alreadyBuilt.end())
-                    found = true;
-            }
-            if (!found && !edge.entity->getMorphedFrom().empty())
-                continue;
-
-            if (alreadyBuilt.find(edge.entity->getName()) != alreadyBuilt.end() && edge.weight == 0)
-                break;
-
-            for (size_t j = 0; j < edge.weight || (j == 0 && edge.weight == 0); j++) {
-                buildlist.push_back(edge.entity);
-            }
-            alreadyBuilt.insert(edge.entity->getName());
-            worklist.push_back(edge.entity);
-            break;
+    // build additional workers
+    std::uniform_int_distribution<> worker_dis(0, 51);
+    std::normal_distribution<> worker_pos_dis(0, buildlist.size() / 2);
+    size_t worker_count = worker_dis(gen);
+    for (size_t i = 0; i < worker_count; i++) {
+        size_t ins_idx = buildlist.size();
+        while (ins_idx >= buildlist.size()) {
+            ins_idx = std::floor(std::abs(worker_pos_dis(gen)));
         }
+        buildlist.insert(ins_idx, worker);
     }
 
-    int availSupply = 0, usedSupply = 0; // TODO: fix the start numbers
-    bool hasAbilityDep = false;
+    std::bernoulli_distribution<> gas_dis(want_gas ? .9 : 0);
+    // when can we start building queens/orbital commands?
+    size_t min_ability_idx = -1;
+    bool want_gas = false;
+    size_t first_prod_idx = -1;
     for (size_t i = 0; i < buildlist.size(); i++) {
-        auto cur = buildlist[i];
-
-        if (!hasAbilityDep && cur == abilityDependency) {
-            hasAbilityDep = true;
-            buildlist.insert(buildlist.begin() + i+1, abilityEntity);
+        if (buildlist[i] == abilityDependency) {
+            min_ability_idx = i;
         }
-
-        if (auto unit = dynamic_cast<UnitBP*>(cur)) {
-            if (usedSupply + unit->getSupplyCost() > availSupply) {
-                buildlist.insert(buildlist.begin() + i, supplyEntity);
-                i--;
-            }
+        if (buildlist[i] == gasBuilding) {
+            want_gas = true;
+            if (gas_dis(gen))
+                buildlist.insert(i + 1, gasBuilding);
         }
-        availSupply = std::min(availSupply + cur->getSupplyProvided(), 2000);
-
-        if (auto res = dynamic_cast<BuildingBP*>(cur)) {
-            if (res->startResources.getGas() > 0) {
-                buildlist.insert(buildlist.begin() + i+1, worker);
-                buildlist.insert(buildlist.begin() + i+1, worker);
-                buildlist.insert(buildlist.begin() + i+1, worker);
-            } else if (res->startResources.getMinerals() > 0) {
-                for (size_t j = 0; j < 16; j++) {
-                    buildlist.insert(buildlist.begin() + i+1, worker);
-                }
-                if (hasAbilityDep) {
-                    buildlist.insert(buildlist.begin() + i+1, abilityEntity);
-                }
-            }
-
-            // add one drone for every zerg building
-            if (cur->getRace() == "zerg") {
-                usedSupply -= 1;
-                buildlist.insert(buildlist.begin() + i+1, worker);
-            }
+        if (!targetBP->getProducedByOneOf().empty() && buildlist[i] == targetBP->getProducedByOneOf().front()) {
+            first_prod_idx = i;
         }
     }
-    return buildlist;
+
+    // build additional bases + queens/orbital commands
+    std::uniform_int_distribution<> main_building_dis(1, 4);
+    std::uniform_int_distribution<> main_building_pos(0, buildlist.size() - 1);
+    std::bernoulli_distribution<> ability_dis(abilityEntity == nullptr ? 0 : .9);
+    size_t main_building_count = main_building_dis(gen);
+    for (size_t i = 1; i < main_building_count; i++) {
+        size_t idx = main_building_pos(gen);
+        buildlist.insert(idx, mainBuilding);
+        if (ability_dis(gen) && min_ability_idx != -1) {
+            buildList.insert(std::max(min_ability_idx, idx) + 1, abilityEntity);
+        }
+        if (gas_dis(gen))
+            buildlist.insert(idx + 1, gasBuilding);
+        if (gas_dis(gen))
+            buildlist.insert(idx + 2, gasBuilding);
+    }
+    // first queen / orbital command
+    if (ability_dis(gen) && min_ability_idx != -1) {
+        buildList.insert(min_ability_idx, abilityEntity);
+    }
+
+    // additional production buildings
+    std::normal_distribution<> prod_dis(targetCount / 5., 2);
+    std::uniform_int_distribution<> prod_pos(first_prod_idx, buildlist.size());
+    if (first_prod_idx != -1) {
+        int prod_idx = 0;
+        ssize_t prod_cnt = prod_dis(gen);
+        for (ssize_t i = 0; i < prod_cnt; i++) {
+            prod_idx = (targetBP->getProducedByOneOf().size() > 1 ? (prod_idx + 1) % 2 : 0);
+            buildlist.insert(prod_pos(gen), prod_idx);
+        }
+    }
 }
+
 
 int main(int argc, char *argv[]) {
     if (argc >= 4 && std::strcmp(argv[1], "forward") == 0) {
@@ -823,8 +820,20 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         std::cout << "digraph {";
         dumpDepGraph(dep_graph);
-        dumpAdjGraph(graphtransformation(dep_graph));
+        auto adj = graphtransformation(dep_graph);
+        dumpAdjGraph(adj);
         std::cout << "}";
+
+        std::mt19937 gen(1337);
+        auto buildlist = topSort(gen, adj);
+        for (auto bp : buildlist) {
+            std::cerr << bp->getName() << std::endl;
+        }
+        std::cerr << std::endl << std::endl;
+        buildlist = topSort(gen, adj);
+        for (auto bp : buildlist) {
+            std::cerr << bp->getName() << std::endl;
+        }
     } else {
         usage(argv);
     }
