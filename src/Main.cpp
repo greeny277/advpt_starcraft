@@ -791,7 +791,8 @@ static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> 
         ssize_t prod_cnt = prod_dis(gen);
         for (ssize_t i = 0; i < prod_cnt; i++) {
             prod_idx = (targetBP->getProducedByOneOf().size() > 1 ? (prod_idx + 1) % 2 : 0);
-            buildlist.insert(buildlist.begin() + prod_pos(gen), prod_idx);
+            std::string producer = targetBP->getProducedByOneOf().at(prod_idx);
+            buildlist.insert(buildlist.begin() + prod_pos(gen), blueprints.at(producer).get());
         }
     }
 }
@@ -814,9 +815,7 @@ int main(int argc, char *argv[]) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         int count = std::atoi(argv[3]);
         auto dep_graph = generateDependencyGraph(unitBP, count);
-        auto buildList = generateRandomBuildlist(unitBP, dep_graph);
-        for (auto &e : buildList)
-            std::cout << e->getName() << std::endl;
+        // TODO
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         auto dep_graph = generateDependencyGraph(unitBP, 4);
