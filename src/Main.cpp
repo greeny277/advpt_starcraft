@@ -737,12 +737,12 @@ static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> 
         while (ins_idx >= buildlist.size()) {
             ins_idx = std::floor(std::abs(worker_pos_dis(gen)));
         }
-        buildlist.insert(ins_idx, worker);
+        buildlist.insert(buildlist.begin()+ins_idx, worker);
     }
 
-    std::bernoulli_distribution<> gas_dis(want_gas ? .9 : 0);
     // when can we start building queens/orbital commands?
     size_t min_ability_idx = -1;
+    size_t gas_idx = -1;
     bool want_gas = false;
     size_t first_prod_idx = -1;
     for (size_t i = 0; i < buildlist.size(); i++) {
@@ -751,33 +751,36 @@ static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> 
         }
         if (buildlist[i] == gasBuilding) {
             want_gas = true;
-            if (gas_dis(gen))
-                buildlist.insert(i + 1, gasBuilding);
+            if(gas_idx == -1)
+                gas_idx = i+1;
         }
-        if (!targetBP->getProducedByOneOf().empty() && buildlist[i] == targetBP->getProducedByOneOf().front()) {
+        if (!targetBP->getProducedByOneOf().empty() && buildlist[i]->getName() == targetBP->getProducedByOneOf().front()) {
             first_prod_idx = i;
         }
     }
+    std::bernoulli_distribution gas_dis(want_gas ? .9 : 0);
+    if(want_gas)
+            buildlist.insert(buildlist.begin() + gas_idx, gasBuilding);
 
     // build additional bases + queens/orbital commands
     std::uniform_int_distribution<> main_building_dis(1, 4);
     std::uniform_int_distribution<> main_building_pos(0, buildlist.size() - 1);
-    std::bernoulli_distribution<> ability_dis(abilityEntity == nullptr ? 0 : .9);
+    std::bernoulli_distribution ability_dis(abilityEntity == nullptr ? 0 : .9);
     size_t main_building_count = main_building_dis(gen);
     for (size_t i = 1; i < main_building_count; i++) {
         size_t idx = main_building_pos(gen);
-        buildlist.insert(idx, mainBuilding);
+        buildlist.insert(buildlist.begin() + idx, mainBuilding);
         if (ability_dis(gen) && min_ability_idx != -1) {
-            buildList.insert(std::max(min_ability_idx, idx) + 1, abilityEntity);
+            buildlist.insert(buildlist.begin() + std::max(min_ability_idx, idx) + 1, abilityEntity);
         }
         if (gas_dis(gen))
-            buildlist.insert(idx + 1, gasBuilding);
+            buildlist.insert(buildlist.begin() + idx + 1, gasBuilding);
         if (gas_dis(gen))
-            buildlist.insert(idx + 2, gasBuilding);
+            buildlist.insert(buildlist.begin() + idx + 2, gasBuilding);
     }
     // first queen / orbital command
     if (ability_dis(gen) && min_ability_idx != -1) {
-        buildList.insert(min_ability_idx, abilityEntity);
+        buildlist.insert(buildlist.begin() + min_ability_idx, abilityEntity);
     }
 
     // additional production buildings
@@ -788,7 +791,7 @@ static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> 
         ssize_t prod_cnt = prod_dis(gen);
         for (ssize_t i = 0; i < prod_cnt; i++) {
             prod_idx = (targetBP->getProducedByOneOf().size() > 1 ? (prod_idx + 1) % 2 : 0);
-            buildlist.insert(prod_pos(gen), prod_idx);
+            buildlist.insert(buildlist.begin() + prod_pos(gen), prod_idx);
         }
     }
 }
