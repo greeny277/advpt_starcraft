@@ -782,8 +782,25 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
 
     // TODO Supply
+    std::uniform_int_distribution<> supply_dis(1, 4);
+    // Start supply depending on race
+    int used_supply = 60;
+    int max_supply = 100;
+    for (size_t i = 0; i < buildlist.size(); i++) {
+
+        UnitBP* unit = dynamic_cast<UnitBP*>(buildlist[i]);
+        if (unit != nullptr) {
+            used_supply += unit->getSupplyCost();
+        }
+        max_supply += buildlist[i]->getSupplyProvided();
+        if(max_supply <= used_supply){
+            buildlist.insert(buildlist.begin() + i - supply_dis(gen), supplyEntity);
+            max_supply += supplyEntity->getSupplyProvided();
+        }
+    }
     return buildlist;
 }
+
 static std::vector<EntityBP*> optimizerLoop(std::mt19937 &gen, std::vector<EntityBP*> buildlist, UnitBP *targetBP, int targetCount, std::string mode, int timeout) {
     std::vector<EntityBP*> bestList;
     int bestFitness = -1;
@@ -833,7 +850,18 @@ int main(int argc, char *argv[]) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         int count = std::atoi(argv[3]);
         auto dep_graph = generateDependencyGraph(unitBP, count);
-        // TODO
+        weightFixing(dep_graph);
+        auto adj = graphtransformation(dep_graph);
+        std::mt19937 gen(1337);
+        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, count, argv[1], 10000);
+        for (auto bp : buildlist) {
+            std::cerr << bp->getName() << std::endl;
+        }
+        std::cerr << std::endl << std::endl;
+        buildlist = addUsefulStuffToBuildlist(gen, topSort(gen, adj), unitBP, 4);
+        for (auto bp : buildlist) {
+            std::cerr << bp->getName() << std::endl;
+        }
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         auto dep_graph = generateDependencyGraph(unitBP, 4);
