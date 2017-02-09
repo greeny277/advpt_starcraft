@@ -334,15 +334,15 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 }
 
 const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
-static void simulate(std::deque<EntityBP*> &initialUnits, std::string &race) {
+static std::vector<State> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
     bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race, blueprints);
     nlohmann::json j = getInitialJSON(race, valid);
 
     std::queue<EntityBP*> buildOrder(initialUnits);
 
+    std::vector<State> states;
 
     if (valid) {
-        std::vector<State> states;
         auto messages = nlohmann::json::array();
 
         bool stillBuilding = false;
@@ -424,6 +424,7 @@ static void simulate(std::deque<EntityBP*> &initialUnits, std::string &race) {
     }
 
     std::cout << j.dump(4) << std::endl;
+    return states;
 }
 
 [[noreturn]] static void usage(char *argv[]) {
@@ -433,36 +434,20 @@ static void simulate(std::deque<EntityBP*> &initialUnits, std::string &race) {
 
 struct fitness {
     int targetCount;
-    int earliestTargetTime;
-    unsigned long workerCount;
-    int uniqueProducingCount;
+    int timeProceeded;
 };
 static struct fitness get_fitness(std::vector<State> &states, UnitBP* targetBP) {
     struct fitness res = {
         0,
-        -1,
-        states.back().getWorkers().size(),
         0,
     };
 
-    int duration = -1;
+    res.timeProceeded = states.back().time;
+
     for (size_t i = 0; i < states.size(); i++) {
         for (auto &unit : states[i].getUnits()) {
-            if (unit.second.getBlueprint() == targetBP) {
-                duration = states[i].time;
-                break;
-            }
-        }
-        if (duration != -1)
-            break;
-    }
-
-    int uniqueProducingCount = 0;
-    std::unordered_set<const BuildingBP*> buildings;
-    int targetCount;
-    for (auto &b : states.back().getBuildings()) {
-        if (buildings.insert(static_cast<const BuildingBP*>(b.second.getBlueprint())).second) {
-            uniqueProducingCount++;
+            if (unit.second.getBlueprint() == targetBP)
+                res.targetCount++;
         }
     }
 
@@ -697,7 +682,7 @@ static std::vector<EntityBP*> topSort(std::mt19937 &gen, std::pair<std::array<En
 
     return sort;
 }
-static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> buildlist, EntityBP *targetBP, int targetCount) {
+static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> buildlist, EntityBP *targetBP, int targetCount) {
     UnitBP *worker;
     EntityBP *abilityDependency;
     EntityBP *abilityEntity;
@@ -795,8 +780,41 @@ static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> 
             buildlist.insert(buildlist.begin() + prod_pos(gen), blueprints.at(producer).get());
         }
     }
-}
 
+    // TODO Supply
+    return buildlist;
+}
+static std::vector<EntityBP*> optimizerLoop(std::mt19937 &gen, std::vector<EntityBP*> buildlist, UnitBP *targetBP, int targetCount, std::string mode, int timeout) {
+    std::vector<EntityBP*> bestList;
+    int bestFitness = -1;
+
+
+    for ( int i = 0; i < timeout; ++i )
+    {
+        auto newList = addUsefulStuffToBuildlist(gen, buildlist, targetBP, targetCount);
+        std::deque<EntityBP*> deqList(newList.begin(), newList.end());
+        auto states = simulate(deqList, targetBP->getRace());
+        int curFitness;
+        if(!states.empty()){
+            if(mode == "rush"){
+                curFitness = get_fitness(states, targetBP).targetCount;
+                if(bestFitness == -1 || curFitness > bestFitness){
+                    bestList = newList;
+                    bestFitness = curFitness;
+                }
+            } else {
+                curFitness = get_fitness(states, targetBP).timeProceeded;
+                if(bestFitness == -1 || curFitness < bestFitness){
+                    bestList = newList;
+                    bestFitness = curFitness;
+                }
+            }
+        }
+    }
+
+    return bestList;
+
+}
 
 int main(int argc, char *argv[]) {
     if (argc >= 4 && std::strcmp(argv[1], "forward") == 0) {
@@ -827,12 +845,13 @@ int main(int argc, char *argv[]) {
         std::cout << "}";
 
         std::mt19937 gen(1337);
-        auto buildlist = topSort(gen, adj);
+        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, 4, "push", 10000);
+
         for (auto bp : buildlist) {
             std::cerr << bp->getName() << std::endl;
         }
         std::cerr << std::endl << std::endl;
-        buildlist = topSort(gen, adj);
+        buildlist = addUsefulStuffToBuildlist(gen, topSort(gen, adj), unitBP, 4);
         for (auto bp : buildlist) {
             std::cerr << bp->getName() << std::endl;
         }
