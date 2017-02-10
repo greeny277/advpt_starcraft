@@ -338,8 +338,11 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 }
 
 
+static int simulation_all, simulation_fail;
+
 static std::pair<std::vector<State>, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
     bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race);
+    simulation_all++;
     nlohmann::json j = getInitialJSON(race, valid);
 
     std::queue<EntityBP*> buildOrder(initialUnits);
@@ -422,10 +425,10 @@ static std::pair<std::vector<State>, nlohmann::json> simulate(std::deque<EntityB
             valid = false;
             j["buildlistValid"] = 0;
             valid = false;
-
             /*for (EntityBP* bp : initialUnits) {
                 std::cerr << bp->getName() << std::endl;
             }*/ // TODO
+            simulation_fail++;
         } else {
             j["messages"] = messages;
         }
@@ -722,7 +725,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
 
     // build additional workers
-    std::uniform_int_distribution<> worker_dis(0, 51);
+    std::uniform_int_distribution<> worker_dis(0, 21);
     std::normal_distribution<> worker_pos_dis(0, buildlist.size() / 2);
     size_t worker_count = worker_dis(gen);
     for (size_t i = 0; i < worker_count; i++) {
@@ -773,8 +776,8 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         insert(gas_idx, gasBuilding);
 
     // build additional bases + queens/orbital commands
-    std::uniform_int_distribution<> main_building_dis(1, 4);
-    std::uniform_int_distribution<> main_building_pos(0, buildlist.size() - 1);
+    std::uniform_int_distribution<> main_building_dis(1, 2);
+    std::uniform_int_distribution<> main_building_pos(buildlist.size()/2, buildlist.size() - 1);
     std::bernoulli_distribution ability_dis(abilityEntity == nullptr ? 0 : .9);
     size_t main_building_count = main_building_dis(gen);
     for (size_t i = 1; i < main_building_count; i++) {
@@ -891,7 +894,7 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 10);
+        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 60);
         std::cout << j.dump(4) << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
@@ -904,11 +907,12 @@ int main(int argc, char *argv[]) {
         std::cout << "}";
 
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 10);
+        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 60);
         std::cout << j.dump(4) << std::endl;
     } else {
         usage(argv);
     }
+    std::cout << simulation_fail << "/" << simulation_all << std::endl;
 
     return EXIT_SUCCESS;
 }
