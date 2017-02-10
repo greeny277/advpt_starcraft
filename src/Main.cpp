@@ -708,6 +708,8 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         mainBuilding = static_cast<BuildingBP*>(blueprints.at("nexus").get());
     }
 
+    /* Remove the main building */
+    buildlist.erase(buildlist.begin());
     // build additional workers
     std::uniform_int_distribution<> worker_dis(0, 21);
     std::normal_distribution<> worker_pos_dis(0, buildlist.size() / 2);
@@ -760,7 +762,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         insert(gas_idx, gasBuilding);
 
     // build additional bases + queens/orbital commands
-    std::uniform_int_distribution<> main_building_dis(1, 2);
+    std::uniform_int_distribution<> main_building_dis(0, 2);
     std::uniform_int_distribution<> main_building_pos(buildlist.size()/2, buildlist.size() - 1);
     std::bernoulli_distribution ability_dis(abilityEntity == nullptr ? 0 : .9);
     size_t main_building_count = main_building_dis(gen);
@@ -781,7 +783,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
 
     // additional production buildings
-    std::normal_distribution<> prod_dis(targetCount / 5., 2);
+    std::normal_distribution<> prod_dis(0, std::max(targetCount / 5., 2.));
     std::uniform_int_distribution<> prod_pos(first_prod_idx, buildlist.size());
     if (first_prod_idx != -1) {
         int prod_idx = 0;
@@ -822,9 +824,15 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     return buildlist;
 }
 
-static nlohmann::json optimizerLoop(std::mt19937 &gen, std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> adj, UnitBP *targetBP, int targetCount, std::string mode, int timeout) {
+static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int targetCount, std::string mode, int timeout, int timebarrier) {
     nlohmann::json bestList;
+    std::vector<EntityBP*> bestBuildList;
+
     int bestFitness = -1;
+    int curCount = targetCount;
+    auto dep_graph = generateDependencyGraph(targetBP, curCount);
+    weightFixing(dep_graph);
+    auto adj = graphtransformation(dep_graph);
 
     auto start = std::chrono::system_clock::now();
     while(1){
@@ -840,23 +848,35 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, std::pair<std::array<Enti
         if(valid){
             int curFitness;
             if(mode == "rush"){
-                curFitness = get_fitness(buildlist_info.first, targetBP).targetCount;
-                if(bestFitness == -1 || curFitness >= bestFitness){
+                curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
+                if(curFitness <= timebarrier){
                     bestList = buildlist_info.second;
-                    bestFitness = curFitness;
+
+                    curCount++;
+                    dep_graph = generateDependencyGraph(targetBP, curCount);
+                    weightFixing(dep_graph);
+                    adj = graphtransformation(dep_graph);
+                    bestBuildList = newList;
                 }
             } else {
                 curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
-                if(bestFitness == -1 || curFitness <= bestFitness){
+                if(bestFitness == -1 || curFitness < bestFitness){
                     bestList = buildlist_info.second;
                     bestFitness = curFitness;
+                    bestBuildList = newList;
                 }
             }
         }
     }
+    //std::cout << "Builded units: " << curCount-1 << std::endl;
+    //for (EntityBP* bp : bestBuildList)
+    //  std::cout << bp->getName() << std::endl;
 
     return bestList;
 }
+
+#define TIMEOUT 20
+#define SEED 1337
 
 int main(int argc, char *argv[]) {
     if (argc >= 4 && std::strcmp(argv[1], "forward") == 0) {
@@ -870,34 +890,21 @@ int main(int argc, char *argv[]) {
             std::cout << j.dump(4) << std::endl;
         }
     } else if (argc == 4 && std::strcmp(argv[1], "rush") == 0) {
-        auto unitBP = blueprints.at(argv[2]).get();
-        int timeout = std::atoi(argv[3]);
+        auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
+        int timebarrier = std::atoi(argv[3]);
+        std::mt19937 gen(SEED);
+        auto j = optimizerLoop(gen, unitBP, 1, argv[1], TIMEOUT, timebarrier);
+        std::cout << j.dump(4) << std::endl;
     } else if (argc == 4 && std::strcmp(argv[1], "push") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         int count = std::atoi(argv[3]);
-        auto dep_graph = generateDependencyGraph(unitBP, count);
-        weightFixing(dep_graph);
-        auto adj = graphtransformation(dep_graph);
-        std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 1);
-        std::cout << j.dump(4) << std::endl;
-    } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
-        auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
-        auto dep_graph = generateDependencyGraph(unitBP, 4);
-        weightFixing(dep_graph);
-        std::cout << "digraph {";
-        dumpDepGraph(dep_graph);
-        auto adj = graphtransformation(dep_graph);
-        dumpAdjGraph(adj);
-        std::cout << "}";
-
-        std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 60);
+        std::mt19937 gen(SEED);
+        auto j = optimizerLoop(gen, unitBP, count, argv[1], TIMEOUT, -1);
         std::cout << j.dump(4) << std::endl;
     } else {
         usage(argv);
     }
-    std::cout << simulation_fail << "/" << simulation_all << std::endl;
+    //std::cout << simulation_fail << "/" << simulation_all << std::endl;
 
     return EXIT_SUCCESS;
 }
