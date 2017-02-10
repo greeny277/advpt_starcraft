@@ -82,6 +82,7 @@ BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
 
     // change state
     s.resources -= blueprint->getCosts();
+    s.adjustSupply(blueprint);
 }
 
 nlohmann::json BuildEntityAction::printStartJSON() {

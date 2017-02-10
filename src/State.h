@@ -28,6 +28,9 @@ public:
     const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints;
     std::unordered_multiset<std::string> alreadyProduced; // Keeps track of currently existing entities by name
 
+    int usedSupply;
+    int maxSupply;
+
 public:
     State(const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints);
     nlohmann::json getUnitJSON();
@@ -49,6 +52,7 @@ public:
     EntityInst *getEntity(int id);
     void moveEntity(int old_id, int new_id);
 
-    int computeUsedSupply() const;
-    int computeMaxSupply() const;
+    inline int computeUsedSupply() const { return usedSupply; };
+    inline int computeMaxSupply() const { return std::min(2000, maxSupply); };
+    void adjustSupply(EntityBP*);
 };
