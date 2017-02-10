@@ -724,8 +724,8 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
 
     // when can we start building queens/orbital commands?
     size_t min_ability_idx = -1;
-    size_t gas_idx = -1;
     bool want_gas = false;
+    size_t gas_idx = -1;
     size_t first_prod_idx = -1;
     for (size_t i = 0; i < buildlist.size(); i++) {
         if (buildlist[i] == abilityDependency) {
@@ -757,14 +757,22 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         }
     };
 
+    std::uniform_int_distribution<> main_building_dis(0, 2);
+    std::uniform_int_distribution<> main_building_pos(buildlist.size()/2, buildlist.size() - 1);
+    std::bernoulli_distribution ability_dis(abilityEntity == nullptr ? 0 : .9);
     std::bernoulli_distribution gas_dis(want_gas ? .9 : 0);
+    // first queen / orbital command
+    if (ability_dis(gen) && min_ability_idx != -1) {
+        insert(min_ability_idx, abilityEntity);
+        if(abilityEntity->getCosts().getGas() > 0){
+            want_gas = true;
+            gas_idx = min_ability_idx-1;
+        }
+    }
     if(want_gas)
         insert(gas_idx, gasBuilding);
 
     // build additional bases + queens/orbital commands
-    std::uniform_int_distribution<> main_building_dis(0, 2);
-    std::uniform_int_distribution<> main_building_pos(buildlist.size()/2, buildlist.size() - 1);
-    std::bernoulli_distribution ability_dis(abilityEntity == nullptr ? 0 : .9);
     size_t main_building_count = main_building_dis(gen);
     for (size_t i = 1; i < main_building_count; i++) {
         size_t idx = main_building_pos(gen);
@@ -777,13 +785,9 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         if (gas_dis(gen))
             insert(idx + 2, gasBuilding);
     }
-    // first queen / orbital command
-    if (ability_dis(gen) && min_ability_idx != -1) {
-        insert(min_ability_idx, abilityEntity);
-    }
 
     // additional production buildings
-    std::normal_distribution<> prod_dis(0, std::max(targetCount / 5., 2.));
+    std::normal_distribution<> prod_dis(0, std::max(targetCount / 3., 2.));
     std::uniform_int_distribution<> prod_pos(first_prod_idx, buildlist.size());
     if (first_prod_idx != -1) {
         int prod_idx = 0;
@@ -801,6 +805,11 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     int used_supply = 60;
     int max_supply = 100;
     for (size_t i = 0; i < buildlist.size(); i++) {
+        if(!want_gas && buildlist[i]->getCosts().getGas() > 0){
+            insert(i - supply_dis(gen), gasBuilding);
+            want_gas = true;
+        }
+
 
         UnitBP* unit = dynamic_cast<UnitBP*>(buildlist[i]);
         if (unit != nullptr) {
@@ -868,9 +877,9 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
             }
         }
     }
-    //std::cout << "Builded units: " << curCount-1 << std::endl;
-    //for (EntityBP* bp : bestBuildList)
-    //  std::cout << bp->getName() << std::endl;
+    std::cout << "Builded units: " << curCount-1 << std::endl;
+    for (EntityBP* bp : bestBuildList)
+      std::cout << bp->getName() << std::endl;
 
     return bestList;
 }
