@@ -8,6 +8,7 @@
 #include <queue>
 #include <string>
 #include <random>
+#include <chrono>
 
 #include "json.hpp"
 
@@ -818,9 +819,13 @@ static std::vector<EntityBP*> optimizerLoop(std::mt19937 &gen, std::vector<Entit
     std::vector<EntityBP*> bestList;
     int bestFitness = -1;
 
-
-    for ( int i = 0; i < timeout; ++i )
-    {
+    auto start = std::chrono::system_clock::now();
+    while(1){
+        auto current = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current - start);
+        if(elapsed.count() >= timeout) {
+            break;
+        }
         auto newList = addUsefulStuffToBuildlist(gen, buildlist, targetBP, targetCount);
         std::deque<EntityBP*> deqList(newList.begin(), newList.end());
         auto states = simulate(deqList, targetBP->getRace());
@@ -840,6 +845,7 @@ static std::vector<EntityBP*> optimizerLoop(std::mt19937 &gen, std::vector<Entit
                 }
             }
         }
+
     }
 
     return bestList;
@@ -866,7 +872,7 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, count, argv[1], 10000);
+        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, count, argv[1], 150);
         for (auto bp : buildlist) {
             std::cerr << bp->getName() << std::endl;
         }
@@ -881,7 +887,7 @@ int main(int argc, char *argv[]) {
         std::cout << "}";
 
         std::mt19937 gen(1337);
-        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, 4, "push", 10000);
+        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, 4, "push", 150);
 
         for (auto bp : buildlist) {
             std::cerr << bp->getName() << std::endl;
