@@ -94,11 +94,11 @@ missile_turret,100,0,25,0,0,0,0,terran,,scv,engineering_bay,0,0,0,building
 sensor_tower,125,100,25,0,0,0,0,terran,,scv,engineering_bay,0,0,0,building
 barracks,150,0,65,0,0,0,0,terran,,scv,supply_depot,0,0,0,building
 factory,150,100,60,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
-armory,150,100,65,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
+armory,150,100,65,0,0,0,0,terran,,scv,factory/factory_with_tech_lab/factory_with_reactor,0,0,0,building
 bunker,100,0,35,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
 ghost_academy,150,50,40,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
-starport,150,100,50,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
-fusion_core,150,150,65,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
+starport,150,100,50,0,0,0,0,terran,,scv,factory/factory_with_tech_lab/factory_with_reactor,0,0,0,building
+fusion_core,150,150,65,0,0,0,0,terran,,scv,starport/starport_with_tech_lab/starport_with_reactor,0,0,0,building
 supply_depot,100,0,30,0,80,0,0,terran,,scv,,0,0,0,building
 barracks_with_reactor,50,50,50,0,0,0,0,terran,barracks,,,0,0,0,building
 barracks_with_tech_lab,50,25,25,0,0,0,0,terran,barracks,,,0,0,0,building
