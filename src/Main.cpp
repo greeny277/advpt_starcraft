@@ -732,7 +732,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     size_t first_prod_idx = -1;
     for (size_t i = 0; i < buildlist.size(); i++) {
         if (buildlist[i] == abilityDependency) {
-            min_ability_idx = i;
+            min_ability_idx = i + 1;
         }
         if (buildlist[i] == gasBuilding) {
             want_gas = true;
@@ -743,9 +743,18 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             first_prod_idx = i;
         }
     }
+
+    auto insert = [&] (size_t idx, EntityBP *what) {
+        if (min_ability_idx >= idx && min_ability_idx != -1)
+            min_ability_idx++;
+        if (gas_idx >= idx && gas_idx != -1)
+            gas_idx++;
+        buildlist.insert(buildlist.begin() + idx, what);
+    };
+
     std::bernoulli_distribution gas_dis(want_gas ? .9 : 0);
     if(want_gas)
-            buildlist.insert(buildlist.begin() + gas_idx, gasBuilding);
+            insert(gas_idx, gasBuilding);
 
     // build additional bases + queens/orbital commands
     std::uniform_int_distribution<> main_building_dis(1, 4);
@@ -754,18 +763,18 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     size_t main_building_count = main_building_dis(gen);
     for (size_t i = 1; i < main_building_count; i++) {
         size_t idx = main_building_pos(gen);
-        buildlist.insert(buildlist.begin() + idx, mainBuilding);
+        insert(idx, mainBuilding);
         if (ability_dis(gen) && min_ability_idx != -1) {
-            buildlist.insert(buildlist.begin() + std::max(min_ability_idx, idx) + 1, abilityEntity);
+            insert(std::max(min_ability_idx, idx) + 1, abilityEntity);
         }
         if (gas_dis(gen))
-            buildlist.insert(buildlist.begin() + idx + 1, gasBuilding);
+            insert(idx + 1, gasBuilding);
         if (gas_dis(gen))
-            buildlist.insert(buildlist.begin() + idx + 2, gasBuilding);
+            insert(idx + 2, gasBuilding);
     }
     // first queen / orbital command
     if (ability_dis(gen) && min_ability_idx != -1) {
-        buildlist.insert(buildlist.begin() + min_ability_idx, abilityEntity);
+        insert(min_ability_idx, abilityEntity);
     }
 
     // additional production buildings
@@ -777,12 +786,12 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         for (ssize_t i = 0; i < prod_cnt; i++) {
             prod_idx = (targetBP->getProducedByOneOf().size() > 1 ? (prod_idx + 1) % 2 : 0);
             std::string producer = targetBP->getProducedByOneOf().at(prod_idx);
-            buildlist.insert(buildlist.begin() + prod_pos(gen), blueprints.at(producer).get());
+            insert(prod_pos(gen), blueprints.at(producer).get());
         }
     }
 
     // TODO Supply
-    std::uniform_int_distribution<> supply_dis(1, 4);
+    std::uniform_int_distribution<> supply_dis(1, 3);
     // Start supply depending on race
     int used_supply = 60;
     int max_supply = 100;
@@ -794,7 +803,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         }
         max_supply += buildlist[i]->getSupplyProvided();
         if(max_supply <= used_supply){
-            buildlist.insert(buildlist.begin() + i - supply_dis(gen), supplyEntity);
+            insert(i - supply_dis(gen), supplyEntity);
             max_supply += supplyEntity->getSupplyProvided();
         }
     }
@@ -854,11 +863,6 @@ int main(int argc, char *argv[]) {
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
         auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, count, argv[1], 10000);
-        for (auto bp : buildlist) {
-            std::cerr << bp->getName() << std::endl;
-        }
-        std::cerr << std::endl << std::endl;
-        buildlist = addUsefulStuffToBuildlist(gen, topSort(gen, adj), unitBP, 4);
         for (auto bp : buildlist) {
             std::cerr << bp->getName() << std::endl;
         }
