@@ -339,7 +339,8 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 }
 
 const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
-static std::vector<State> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
+
+static std::pair<std::vector<State>, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
     bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race, blueprints);
     nlohmann::json j = getInitialJSON(race, valid);
 
@@ -423,13 +424,18 @@ static std::vector<State> simulate(std::deque<EntityBP*> &initialUnits, std::str
             valid = false;
             j["buildlistValid"] = 0;
             valid = false;
+            auto buildlist = nlohmann::json::array();
+            for (EntityBP* bp : initialUnits) {
+                buildlist.push_back(bp->getName());
+            }
+            j["buildlist_debug"] = buildlist;
         } else {
             j["messages"] = messages;
         }
     }
 
-    std::cout << j.dump(4) << std::endl;
-    return states;
+    //std::cout << j.dump(4) << std::endl;
+    return make_pair(states, j);
 }
 
 [[noreturn]] static void usage(char *argv[]) {
@@ -750,16 +756,24 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
 
     auto insert = [&] (size_t idx, EntityBP *what) {
-        if (min_ability_idx >= idx && min_ability_idx != -1)
-            min_ability_idx++;
-        if (gas_idx >= idx && gas_idx != -1)
-            gas_idx++;
-        buildlist.insert(buildlist.begin() + idx, what);
+        bool repeat = true;
+            while (repeat) {
+                repeat = false;
+            if (min_ability_idx >= idx && min_ability_idx != -1)
+                min_ability_idx++;
+            if (gas_idx >= idx && gas_idx != -1)
+                gas_idx++;
+            buildlist.insert(buildlist.begin() + idx, what);
+            if (!what->getMorphedFrom().empty()) {
+                what = blueprints.at(what->getMorphedFrom().front()).get();
+                repeat = true;
+            }
+        }
     };
 
     std::bernoulli_distribution gas_dis(want_gas ? .9 : 0);
     if(want_gas)
-            insert(gas_idx, gasBuilding);
+        insert(gas_idx, gasBuilding);
 
     // build additional bases + queens/orbital commands
     std::uniform_int_distribution<> main_building_dis(1, 4);
@@ -812,11 +826,20 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             max_supply += supplyEntity->getSupplyProvided();
         }
     }
+
+    auto larva = blueprints.at("larva").get();
+    for (size_t i = 0; i < buildlist.size(); i++) {
+        if (buildlist[i] == larva) {
+            buildlist.erase(buildlist.begin() + i);
+            i--;
+        }
+    }
+
     return buildlist;
 }
 
-static std::vector<EntityBP*> optimizerLoop(std::mt19937 &gen, std::vector<EntityBP*> buildlist, UnitBP *targetBP, int targetCount, std::string mode, int timeout) {
-    std::vector<EntityBP*> bestList;
+static nlohmann::json optimizerLoop(std::mt19937 &gen, std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> adj, UnitBP *targetBP, int targetCount, std::string mode, int timeout) {
+    nlohmann::json bestList;
     int bestFitness = -1;
 
     auto start = std::chrono::system_clock::now();
@@ -828,28 +851,27 @@ static std::vector<EntityBP*> optimizerLoop(std::mt19937 &gen, std::vector<Entit
         }
         auto newList = addUsefulStuffToBuildlist(gen, buildlist, targetBP, targetCount);
         std::deque<EntityBP*> deqList(newList.begin(), newList.end());
-        auto states = simulate(deqList, targetBP->getRace());
-        int curFitness;
-        if(!states.empty()){
+        auto buildlist_info = simulate(deqList, targetBP->getRace());
+        int valid = buildlist_info.second["buildlistValid"];
+        if(valid){
+            int curFitness;
             if(mode == "rush"){
-                curFitness = get_fitness(states, targetBP).targetCount;
-                if(bestFitness == -1 || curFitness > bestFitness){
-                    bestList = newList;
+                curFitness = get_fitness(buildlist_info.first, targetBP).targetCount;
+                if(bestFitness == -1 || curFitness >= bestFitness){
+                    bestList = buildlist_info.second;
                     bestFitness = curFitness;
                 }
             } else {
-                curFitness = get_fitness(states, targetBP).timeProceeded;
-                if(bestFitness == -1 || curFitness < bestFitness){
-                    bestList = newList;
+                curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
+                if(bestFitness == -1 || curFitness <= bestFitness){
+                    bestList = buildlist_info.second;
                     bestFitness = curFitness;
                 }
             }
         }
-
     }
 
     return bestList;
-
 }
 
 int main(int argc, char *argv[]) {
@@ -872,10 +894,8 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, count, argv[1], 150);
-        for (auto bp : buildlist) {
-            std::cerr << bp->getName() << std::endl;
-        }
+        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 1000);
+        std::cout << j.dump(4) << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         auto dep_graph = generateDependencyGraph(unitBP, 4);
@@ -887,7 +907,8 @@ int main(int argc, char *argv[]) {
         std::cout << "}";
 
         std::mt19937 gen(1337);
-        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, 4, "push", 150);
+        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 10000);
+        std::cout << j.dump(4) << std::endl;
 
         for (auto bp : buildlist) {
             std::cerr << bp->getName() << std::endl;
