@@ -33,7 +33,7 @@ static std::vector<Ability*> createAbilities(const std::string &name) {
     return abilities;
 }
 
-EntityBP::EntityBP(std::string data[15], bool is_unit_) :
+EntityBP::EntityBP(std::string data[15], bool is_unit_, bool is_worker_) :
     name(data[0]),
     race(data[8]),
     startEnergy(std::stoi(data[6])),
@@ -46,7 +46,7 @@ EntityBP::EntityBP(std::string data[15], bool is_unit_) :
     morphedFrom(data[9].empty() ? std::vector<std::string>{} : std::vector<std::string>{data[9]}),
     supplyProvided(std::stoi(data[5])),
     is_unit(is_unit_),
-    is_worker(is_unit ? static_cast<UnitBP*>(this)->isWorker : false) {
+    is_worker(is_worker_) {
 }
 
 const std::string & EntityBP::getName() const { return name; }
@@ -62,15 +62,14 @@ const std::vector<std::string>& EntityBP::getMorphedFrom() const { return morphe
 int EntityBP::getSupplyProvided() const { return supplyProvided; }
 
 UnitBP::UnitBP(std::string data[15]) :
-    EntityBP(data, true),
-    supplyCost(std::stoi(data[4])),
-    isWorker(std::stoi(data[12])==1) {
+    EntityBP(data, true, std::stoi(data[12])==1),
+    supplyCost(std::stoi(data[4])) {
 }
 int UnitBP::getSupplyCost() const { return supplyCost; }
 int UnitBP::newInstance(State &state) const {
     int id;
 
-    if (isWorker) {
+    if (is_worker) {
         auto newWorker = WorkerInst(this);
         id = newWorker.getID();
         state.addWorkerInst(newWorker);
@@ -84,7 +83,7 @@ int UnitBP::newInstance(State &state) const {
 
 
 BuildingBP::BuildingBP(std::string data[15]) :
-    EntityBP(data, false),
+    EntityBP(data, false, false),
     buildSlots(name.rfind("_with_reactor") == std::string::npos ? 1 : 2),
     startResources(std::stoi(data[13]), std::stoi(data[14])) {
 }

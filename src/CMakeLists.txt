@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 2.6)
 project (SC2BuildSimulator)
 add_executable (SC2BuildSimulator EntityBP.cpp EntityInst.cpp Main.cpp Resources.cpp State.cpp Action.cpp Ability.cpp Helper.cpp)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -pedantic -Wextra -Wnon-virtual-dtor -Wsequence-point -Wshadow -O3 -g ")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -pedantic -Wextra -Wnon-virtual-dtor -Wsequence-point -Wshadow -O0 -g")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -pedantic -Wextra -Wnon-virtual-dtor -Wsequence-point -Wshadow -O3 -g -fsanitize=address,leak,undefined")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -pedantic -Wextra -Wnon-virtual-dtor -Wsequence-point -Wshadow -O3 -g")
 set(CMAKE_CXX_COMPILER "g++")

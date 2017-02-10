@@ -24,7 +24,7 @@ class EntityBP {
         const std::vector<std::string> morphedFrom; // third required entity. This entity is gone once this was built.
         const int supplyProvided;
 
-        explicit EntityBP(std::string data[15], bool);
+        explicit EntityBP(std::string data[15], bool, bool);
     public:
         const bool is_unit;
         const bool is_worker;
@@ -49,7 +49,6 @@ class UnitBP : public EntityBP {
         const int supplyCost;
 
     public:
-        const bool isWorker;
         explicit UnitBP(std::string data[15]);
         int getSupplyCost() const;
         int newInstance(State&) const override;

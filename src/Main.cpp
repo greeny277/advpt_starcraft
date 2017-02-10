@@ -523,7 +523,7 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
     }
     return dep_graph;
 }
-static void dumpDepGraph(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
+/*static void dumpDepGraph(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
     std::cout << "subgraph cluster_depend{";
     for (auto &entr : dep_graph) {
         for (auto &dep : entr.second) {
@@ -549,7 +549,7 @@ static void dumpAdjGraph(std::pair<std::array<EntityBP*,1000>, std::array<bool,1
         }
     }
     std::cout << "}";
-}
+}*/
 
 static void weightFixing(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
     std::unordered_map<EntityBP *, std::pair<size_t, dependency_edge&>> incoming_edges;
@@ -683,7 +683,6 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     EntityBP *abilityEntity;
     EntityBP *supplyEntity;
     BuildingBP *mainBuilding;
-    BuildingBP *productionEntity;
     BuildingBP *gasBuilding;
     if (targetBP->getRace() == "zerg") {
         gasBuilding = static_cast<BuildingBP*>(blueprints.at("extractor").get());
@@ -710,6 +709,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
 
     /* Remove the main building */
     buildlist.erase(buildlist.begin());
+    assert(buildlist[0] != (EntityBP*)0x111);
     // build additional workers
     std::uniform_int_distribution<> worker_dis(0, 21);
     std::normal_distribution<> worker_pos_dis(0, buildlist.size() / 2);
@@ -723,12 +723,12 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
 
     // when can we start building queens/orbital commands?
-    size_t min_ability_idx = -1;
+    ssize_t min_ability_idx = -1;
     bool want_gas = false;
-    size_t gas_idx = -1;
-    size_t first_prod_idx = -1;
+    ssize_t gas_idx = -1;
+    size_t first_prod_idx = ~0;
     for (size_t i = 0; i < buildlist.size(); i++) {
-        if (buildlist[i] == abilityDependency) {
+        if (buildlist[i] == abilityDependency && min_ability_idx == -1) {
             min_ability_idx = i + 1;
         }
         if (buildlist[i] == gasBuilding) {
@@ -736,15 +736,16 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             if(gas_idx == -1)
                 gas_idx = i+1;
         }
-        if (!targetBP->getProducedByOneOf().empty() && buildlist[i]->getName() == targetBP->getProducedByOneOf().front()) {
+        if (!targetBP->getProducedByOneOf().empty() && buildlist[i]->getName() == targetBP->getProducedByOneOf().front() && first_prod_idx == ~0u) {
             first_prod_idx = i;
         }
     }
+    assert(first_prod_idx != ~0u);
 
-    auto insert = [&] (size_t idx, EntityBP *what) {
+    auto insert = [&] (ssize_t idx, EntityBP *what) {
         bool repeat = true;
-            while (repeat) {
-                repeat = false;
+        while (repeat) {
+            repeat = false;
             if (min_ability_idx >= idx && min_ability_idx != -1)
                 min_ability_idx++;
             if (gas_idx >= idx && gas_idx != -1)
@@ -775,7 +776,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     // build additional bases + queens/orbital commands
     size_t main_building_count = main_building_dis(gen);
     for (size_t i = 1; i < main_building_count; i++) {
-        size_t idx = main_building_pos(gen);
+        ssize_t idx = main_building_pos(gen);
         insert(idx, mainBuilding);
         if (ability_dis(gen) && min_ability_idx != -1) {
             insert(std::max(min_ability_idx, idx) + 1, abilityEntity);
@@ -787,37 +788,40 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
 
     // additional production buildings
-    std::normal_distribution<> prod_dis(0, std::max(targetCount / 3., 2.));
-    std::uniform_int_distribution<> prod_pos(first_prod_idx, buildlist.size());
-    if (first_prod_idx != -1) {
-        int prod_idx = 0;
-        ssize_t prod_cnt = prod_dis(gen);
-        for (ssize_t i = 0; i < prod_cnt; i++) {
-            prod_idx = (targetBP->getProducedByOneOf().size() > 1 ? (prod_idx + 1) % 2 : 0);
+    std::normal_distribution<double> prod_dis(0, std::max(targetCount / 3., 2.));
+    if (first_prod_idx != ~0u) {
+        std::uniform_int_distribution<> prod_pos((size_t)first_prod_idx, buildlist.size() - 1);
+        double prod_cnt = std::round(prod_dis(gen));
+        std::multiset<size_t> prod_indices;
+        for (size_t i = 0; i < prod_cnt; i++) {
+            prod_indices.insert(prod_pos(gen));
+        }
+        size_t i = 1;
+        for (size_t pos : prod_indices) {
+            size_t prod_idx = targetBP->getProducedByOneOf().size() > 1 ? (i % 2) : 0;
             std::string producer = targetBP->getProducedByOneOf().at(prod_idx);
-            insert(prod_pos(gen), blueprints.at(producer).get());
+            insert(pos + i, blueprints.at(producer).get());
+            i++;
         }
     }
 
     // supply
     std::uniform_int_distribution<> supply_dis(1, 3);
-    // Start supply depending on race
     int used_supply = 60;
     int max_supply = 100;
-    for (size_t i = 0; i < buildlist.size(); i++) {
+    for (ssize_t i = 0; i < (ssize_t)buildlist.size(); i++) {
         if(!want_gas && buildlist[i]->getCosts().getGas() > 0){
-            insert(i - supply_dis(gen), gasBuilding);
+            insert(std::max(ssize_t { 0l }, i - supply_dis(gen)), gasBuilding);
             want_gas = true;
         }
 
-
-        UnitBP* unit = dynamic_cast<UnitBP*>(buildlist[i]);
-        if (unit != nullptr) {
-            used_supply += unit->getSupplyCost();
+        if (buildlist[i]->is_unit) {
+            used_supply += static_cast<UnitBP*>(buildlist[i])->getSupplyCost();
         }
+        // TODO: morphing
         max_supply += buildlist[i]->getSupplyProvided();
-        if(max_supply <= used_supply){
-            insert(i - supply_dis(gen), supplyEntity);
+        if(max_supply < used_supply){
+            insert(std::max(ssize_t { 0 }, i - supply_dis(gen)), supplyEntity);
             max_supply += supplyEntity->getSupplyProvided();
         }
     }
