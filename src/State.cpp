@@ -32,17 +32,17 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
             mainBuildingID = blueprints.at("hatchery").get()->newInstance(*this);
             EntityBP *overlord = blueprints.at("overlord").get();
             overlord->newInstance(*this);
-            adjustSupply(overlord);
+            adjustSupply(overlord, false);
         } else {
             assert(false);
         }
         ResourceInst &mainBuilding = getResources().at(mainBuildingID);
-        adjustSupply(mainBuilding.getBlueprint());
+        adjustSupply(mainBuilding.getBlueprint(), false);
         const UnitBP *worker = static_cast<const UnitBP*>(blueprints.at(workerName).get());
         for (size_t i = 0; i < 6; i++) {
             int workerID = worker->newInstance(*this);
             getWorkers().at(workerID).assignToResource(mainBuilding, *this);
-            adjustSupply(worker);
+            adjustSupply(worker, true);
         }
 }
 nlohmann::json State::getUnitJSON(){
@@ -121,19 +121,26 @@ EntityInst *State::getEntity(int id) {
         return &rent->second;
     return nullptr;
 }
-void State::adjustSupply(const EntityBP*entity) {
-    if (!entity->getMorphedFrom().empty()) {
-        auto &front = blueprints.at(entity->getMorphedFrom().front());
-        if (front->is_unit) {
-            usedSupply -= static_cast<const UnitBP*>(front.get())->getSupplyCost();
+void State::adjustSupply(const EntityBP *entity, bool starting) {
+    if (starting) {
+        if (!entity->getMorphedFrom().empty()) {
+            auto &front = blueprints.at(entity->getMorphedFrom().front());
+            if (front->is_unit) {
+                usedSupply -= static_cast<const UnitBP*>(front.get())->getSupplyCost();
+            }
         }
-        maxSupply -= front->getSupplyProvided();
+        if (entity->is_unit) {
+            auto unit = static_cast<const UnitBP*>(entity);
+            usedSupply += unit->getSupplyCost();
+        }
+    } else {
+        maxSupply += entity->getSupplyProvided();
+
+        if (!entity->getMorphedFrom().empty()) {
+            auto &front = blueprints.at(entity->getMorphedFrom().front());
+            maxSupply -= front->getSupplyProvided();
+        }
     }
-    if (entity->is_unit) {
-        auto unit = static_cast<const UnitBP*>(entity);
-        usedSupply += unit->getSupplyCost();
-    }
-    maxSupply += entity->getSupplyProvided();
 }
 
 void State::moveEntity(int old_id, int new_id) {

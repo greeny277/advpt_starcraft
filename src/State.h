@@ -56,7 +56,7 @@ public:
 
     inline int computeUsedSupply() const { return usedSupply; };
     inline int computeMaxSupply() const { return std::min(2000, maxSupply); };
-    void adjustSupply(const EntityBP*);
+    void adjustSupply(const EntityBP*, bool starting);
 };
 template <typename T>
 inline void State::iterEntities(T f) {

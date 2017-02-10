@@ -82,7 +82,7 @@ BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
 
     // change state
     s.resources -= blueprint->getCosts();
-    s.adjustSupply(blueprint);
+    s.adjustSupply(blueprint, true);
 }
 
 nlohmann::json BuildEntityAction::printStartJSON() {
@@ -162,7 +162,10 @@ void BuildEntityAction::finish(State &s) {
     produced.push_back(id); // remember ID for JSON output
     if(blueprint->getName() == "zergling"){
         produced.push_back(id_new); // remember ID for JSON output
+        s.adjustSupply(blueprint, false);
     }
+
+    s.adjustSupply(blueprint, false);
 
     // TODO: check if building produces two or one unit at the same time
     return;
