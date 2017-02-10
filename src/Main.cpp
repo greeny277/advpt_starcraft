@@ -194,7 +194,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
             dependencies.insert(ent.getBlueprint()->getName());
             });
 
-    int vespInst = 0;
+    int vespInst = 0, bases = 1;
     int currentSupply = s.computeMaxSupply(); // 1 base = 10 supply
     int neededSupply = s.computeUsedSupply(); // six workers at begin
     for(auto bp : initialUnits) {
@@ -237,13 +237,17 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
                 break;
             }
         }
-        // there are only two vespene geysers per base
-        if(isVespeneInst(bp->getName())) {
-            if(vespInst == 2) {
-                std::cerr << "there are only two vespene geysers per base, cannot build : " << bp->getName() << std::endl;
-                return false;
-            } else {
-                vespInst++;
+        if (auto building = dynamic_cast<const BuildingBP*>(bp)) {
+            // there are only two vespene geysers per base
+            if(building->startResources.getGas()) {
+                if(vespInst == 2*bases) {
+                    std::cerr << "there are only two vespene geysers per base, cannot build : " << bp->getName() << std::endl;
+                    return false;
+                } else {
+                    vespInst++;
+                }
+            } else if (building->startResources.getMinerals()) {
+                bases++;
             }
         }
         auto *unit = dynamic_cast<const UnitBP*>(bp);
@@ -790,7 +794,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         }
     }
 
-    // TODO Supply
+    // supply
     std::uniform_int_distribution<> supply_dis(1, 3);
     // Start supply depending on race
     int used_supply = 60;
