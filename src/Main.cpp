@@ -749,16 +749,24 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
 
     auto insert = [&] (size_t idx, EntityBP *what) {
-        if (min_ability_idx >= idx && min_ability_idx != -1)
-            min_ability_idx++;
-        if (gas_idx >= idx && gas_idx != -1)
-            gas_idx++;
-        buildlist.insert(buildlist.begin() + idx, what);
+        bool repeat = true;
+            while (repeat) {
+                repeat = false;
+            if (min_ability_idx >= idx && min_ability_idx != -1)
+                min_ability_idx++;
+            if (gas_idx >= idx && gas_idx != -1)
+                gas_idx++;
+            buildlist.insert(buildlist.begin() + idx, what);
+            if (!what->getMorphedFrom().empty()) {
+                what = blueprints.at(what->getMorphedFrom().front()).get();
+                repeat = true;
+            }
+        }
     };
 
     std::bernoulli_distribution gas_dis(want_gas ? .9 : 0);
     if(want_gas)
-            insert(gas_idx, gasBuilding);
+        insert(gas_idx, gasBuilding);
 
     // build additional bases + queens/orbital commands
     std::uniform_int_distribution<> main_building_dis(1, 4);
