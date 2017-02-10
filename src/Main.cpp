@@ -338,7 +338,8 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 }
 
 const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
-static std::vector<State> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
+
+static std::pair<std::vector<State>, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
     bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race, blueprints);
     nlohmann::json j = getInitialJSON(race, valid);
 
@@ -432,8 +433,8 @@ static std::vector<State> simulate(std::deque<EntityBP*> &initialUnits, std::str
         }
     }
 
-    std::cout << j.dump(4) << std::endl;
-    return states;
+    //std::cout << j.dump(4) << std::endl;
+    return make_pair(states, j);
 }
 
 [[noreturn]] static void usage(char *argv[]) {
@@ -836,28 +837,27 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     return buildlist;
 }
 
-static std::vector<EntityBP*> optimizerLoop(std::mt19937 &gen, std::vector<EntityBP*> buildlist, UnitBP *targetBP, int targetCount, std::string mode, int timeout) {
-    std::vector<EntityBP*> bestList;
+static nlohmann::json optimizerLoop(std::mt19937 &gen, std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> adj, UnitBP *targetBP, int targetCount, std::string mode, int timeout) {
+    nlohmann::json bestList;
     int bestFitness = -1;
 
-
-    for ( int i = 0; i < timeout; ++i )
-    {
-        auto newList = addUsefulStuffToBuildlist(gen, buildlist, targetBP, targetCount);
+    for ( int i = 0; i < timeout; ++i ){
+        auto newList = addUsefulStuffToBuildlist(gen, topSort(gen,adj), targetBP, targetCount);
         std::deque<EntityBP*> deqList(newList.begin(), newList.end());
-        auto states = simulate(deqList, targetBP->getRace());
-        int curFitness;
-        if(!states.empty()){
+        auto buildlist_info = simulate(deqList, targetBP->getRace());
+        int valid = buildlist_info.second["buildlistValid"];
+        if(valid){
+            int curFitness;
             if(mode == "rush"){
-                curFitness = get_fitness(states, targetBP).targetCount;
-                if(bestFitness == -1 || curFitness > bestFitness){
-                    bestList = newList;
+                curFitness = get_fitness(buildlist_info.first, targetBP).targetCount;
+                if(bestFitness == -1 || curFitness >= bestFitness){
+                    bestList = buildlist_info.second;
                     bestFitness = curFitness;
                 }
             } else {
-                curFitness = get_fitness(states, targetBP).timeProceeded;
-                if(bestFitness == -1 || curFitness < bestFitness){
-                    bestList = newList;
+                curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
+                if(bestFitness == -1 || curFitness <= bestFitness){
+                    bestList = buildlist_info.second;
                     bestFitness = curFitness;
                 }
             }
@@ -865,7 +865,6 @@ static std::vector<EntityBP*> optimizerLoop(std::mt19937 &gen, std::vector<Entit
     }
 
     return bestList;
-
 }
 
 int main(int argc, char *argv[]) {
@@ -888,10 +887,8 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, count, argv[1], 10000);
-        for (auto bp : buildlist) {
-            std::cerr << bp->getName() << std::endl;
-        }
+        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 10000);
+        std::cout << j.dump(4) << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         auto dep_graph = generateDependencyGraph(unitBP, 4);
@@ -903,16 +900,9 @@ int main(int argc, char *argv[]) {
         std::cout << "}";
 
         std::mt19937 gen(1337);
-        auto buildlist = optimizerLoop(gen, topSort(gen, adj), unitBP, 4, "push", 10000);
+        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 10000);
+        std::cout << j.dump(4) << std::endl;
 
-        for (auto bp : buildlist) {
-            std::cerr << bp->getName() << std::endl;
-        }
-        std::cerr << std::endl << std::endl;
-        buildlist = addUsefulStuffToBuildlist(gen, topSort(gen, adj), unitBP, 4);
-        for (auto bp : buildlist) {
-            std::cerr << bp->getName() << std::endl;
-        }
     } else {
         usage(argv);
     }
