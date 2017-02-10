@@ -14,7 +14,9 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
     injectActions{},
     buildActions{},
     blueprints(blueprints_),
-    alreadyProduced{} {
+    alreadyProduced{},
+    usedSupply(0),
+    maxSupply(0) {
 
         const char *workerName = nullptr;
         int mainBuildingID;
@@ -28,15 +30,19 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
         } else if (race == "zerg") {
             workerName = "drone";
             mainBuildingID = blueprints.at("hatchery").get()->newInstance(*this);
-            blueprints.at("overlord")->newInstance(*this);
+            EntityBP *overlord = blueprints.at("overlord").get();
+            overlord->newInstance(*this);
+            maxSupply += overlord->getSupplyProvided();
         } else {
             assert(false);
         }
         ResourceInst &mainBuilding = getResources().at(mainBuildingID);
+        maxSupply += mainBuilding.getBlueprint()->getSupplyProvided();
         const UnitBP *worker = static_cast<const UnitBP*>(blueprints.at(workerName).get());
         for (size_t i = 0; i < 6; i++) {
             int workerID = worker->newInstance(*this);
             getWorkers().at(workerID).assignToResource(mainBuilding, *this);
+            usedSupply += worker->getSupplyProvided();
         }
 }
 nlohmann::json State::getUnitJSON(){
@@ -133,37 +139,19 @@ EntityInst *State::getEntity(int id) {
         return &rent->second;
     return nullptr;
 }
-int State::computeUsedSupply() const {
-    int supply = 0;
-    // compute supply of existing units (skip morphing units)
-    iterEntities([&](const EntityInst &e) {
-        if (!e.isMorphing()) {
-            if (auto bp = dynamic_cast<const UnitBP*>(e.getBlueprint())) {
-                supply += bp->getSupplyCost();
-            }
+void State::adjustSupply(EntityBP*entity) {
+    if (!entity->getMorphedFrom().empty()) {
+        if (auto morph_unit = dynamic_cast<UnitBP*>(blueprints.at(entity->getMorphedFrom().front()).get())) {
+            usedSupply -= morph_unit->getSupplyCost();
         }
-    });
-    // compute supply of units that are getting built right now
-    for (const auto &action : buildActions) {
-        if (action.hasFinished()) // skip finished actions to avoid double counting
-            continue;
-
-        if (auto bp = dynamic_cast<const UnitBP*>(action.getBlueprint())) {
-            supply += bp->getSupplyCost();
-            if(bp->getName() == "zergling"){
-                supply += bp->getSupplyCost();
-            }
+        if (auto morph_building = dynamic_cast<UnitBP*>(blueprints.at(entity->getMorphedFrom().front()).get())) {
+            maxSupply -= morph_building->getSupplyProvided();
         }
     }
-
-    return supply;
-}
-int State::computeMaxSupply() const {
-    int supply = 0;
-    iterEntities([&](const EntityInst &e) {
-        supply += e.getBlueprint()->getSupplyProvided();
-    });
-    return std::min(2000, supply);
+    if (auto unit = dynamic_cast<UnitBP*>(entity)) {
+        usedSupply += unit->getSupplyCost();
+    }
+    maxSupply += entity->getSupplyProvided();
 }
 
 void State::moveEntity(int old_id, int new_id) {

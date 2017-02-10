@@ -53,9 +53,6 @@ bool EntityInst::isMorphing() const {
     return morphing;
 }
 
-void EntityInst::setMorphing(bool b){
-    morphing =  b;
-}
 bool EntityInst::startMorphing(EntityBP *entity, State &s) {
     if (!checkBuildRequirements(entity, s, dynamic_cast<const UnitBP*>(getBlueprint())) || !canMorph())
     {
@@ -75,6 +72,7 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
 
     s.buildActions.push_back(BuildEntityAction(entity, -1, getID(), s));
     morphing = true;
+
     return true;
 }
 

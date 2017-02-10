@@ -21,7 +21,6 @@ class EntityInst {
     public:
         virtual bool isBusy() const;
         bool isMorphing() const;
-        void setMorphing(bool b);
         bool startMorphing(EntityBP *, State &s);
         explicit EntityInst(const EntityBP *bp);
         const EntityBP *getBlueprint() const;

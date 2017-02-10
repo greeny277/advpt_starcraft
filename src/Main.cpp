@@ -51,9 +51,10 @@ std::unordered_map<std::string, std::unique_ptr<EntityBP>> readConfig() {
     }
     return res;
 }
+const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
 
 
-std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints, const char *const fname) {
+std::deque<EntityBP*> readBuildOrder(const char *const fname) {
     std::deque<EntityBP*> bps;
     std::fstream input(fname, std::ios::in);
     if (!input.is_open()) {
@@ -74,28 +75,26 @@ std::deque<EntityBP*> readBuildOrder(const std::unordered_map<std::string, std::
     return bps;
 }
 void resourceUpdate(State &state) {
+    for (auto &res : state.getResources()) {
+        state.resources += res.second.mine();
+    }
     state.iterEntities([&](EntityInst& ent) {
-            ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
-            if (res != nullptr) {
-            state.resources += res->mine();
-            }
-            ent.restoreEnergy();
-            });
+        ent.restoreEnergy();
+    });
 }
 
 void larvaeUpdate(State &state) {
-    state.iterEntities([&](EntityInst& ent) {
-            ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
-            if(res != nullptr){
-            auto name = res->getBlueprint()->getName();
-            auto larvaeProducer = {"hatchery","lair","hive"};
-            auto r = find(larvaeProducer.begin(), larvaeProducer.end(),name);
-            if (r != larvaeProducer.end()) {
-            res->step(state);
-            }
-            }
-
-            });
+    static auto larvaeProducer = {
+        blueprints.at("hatchery").get(),
+        blueprints.at("lair").get(),
+        blueprints.at("hive").get(),
+    };
+    for (auto res : state.getResources()) {
+        auto r = std::find(larvaeProducer.begin(), larvaeProducer.end(), res.second.getBlueprint());
+        if (r != larvaeProducer.end()) {
+            res.second.step(state);
+        }
+    }
 }
 
 template<typename T>
@@ -187,7 +186,7 @@ static bool checkAndRunAbilities(State &s) {
 }
 
 
-static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints ) {
+static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race) {
     State s(race, blueprints);
     std::unordered_multiset<std::string> dependencies;
     s.iterEntities([&](const EntityInst &ent) {
@@ -337,10 +336,9 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
     return buildingStarted;
 }
 
-const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
 
 static std::pair<std::vector<State>, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
-    bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race, blueprints);
+    bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race);
     nlohmann::json j = getInitialJSON(race, valid);
 
     std::queue<EntityBP*> buildOrder(initialUnits);
@@ -423,11 +421,10 @@ static std::pair<std::vector<State>, nlohmann::json> simulate(std::deque<EntityB
             valid = false;
             j["buildlistValid"] = 0;
             valid = false;
-            auto buildlist = nlohmann::json::array();
-            for (EntityBP* bp : initialUnits) {
-                buildlist.push_back(bp->getName());
-            }
-            j["buildlist_debug"] = buildlist;
+
+            /*for (EntityBP* bp : initialUnits) {
+                std::cerr << bp->getName() << std::endl;
+            }*/ // TODO
         } else {
             j["messages"] = messages;
         }
@@ -871,7 +868,7 @@ int main(int argc, char *argv[]) {
     if (argc >= 4 && std::strcmp(argv[1], "forward") == 0) {
         std::string race(argv[2]);
         for (int i = 3; i < argc; i++) {
-            auto initialUnits = readBuildOrder(blueprints, argv[i]);
+            auto initialUnits = readBuildOrder(argv[i]);
             if(initialUnits.empty()) {
                 std::cerr << "Invalid build order?" << std::endl;
             }
@@ -887,7 +884,7 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 1000);
+        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 100);
         std::cout << j.dump(4) << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
@@ -900,7 +897,7 @@ int main(int argc, char *argv[]) {
         std::cout << "}";
 
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 10000);
+        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 100);
         std::cout << j.dump(4) << std::endl;
 
     } else {
