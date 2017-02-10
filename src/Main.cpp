@@ -769,7 +769,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             gas_idx = min_ability_idx-1;
         }
     }
-    if(want_gas)
+    if(want_gas && gas_dis(gen))
         insert(gas_idx, gasBuilding);
 
     // build additional bases + queens/orbital commands
