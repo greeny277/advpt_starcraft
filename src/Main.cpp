@@ -168,13 +168,13 @@ static void checkActions(std::vector<T>& actions, State& s){
 static bool checkAndRunAbilities(State &s) {
     bool result = false;
     s.iterEntities([&](EntityInst& e) {
-        e.restoreEnergy();
         for (const Ability *ab : e.getBlueprint()->getAbilities()) {
             if (e.getCurrentEnergy() >= ab->energyCosts && !result && ab->create(s, e.getID())) {
                 e.removeEnergy(ab->energyCosts);
                 result = true;
             }
         }
+        e.restoreEnergy();
     });
     return result;
 }
@@ -230,7 +230,8 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
                 break;
             }
         }
-        if (auto building = dynamic_cast<const BuildingBP*>(bp)) {
+        if (!bp->is_unit) {
+            auto building = static_cast<const BuildingBP*>(bp);
             // there are only two vespene geysers per base
             if(building->startResources.getGas()) {
                 if(vespInst == 2*bases) {
@@ -243,9 +244,8 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
                 bases++;
             }
         }
-        auto *unit = dynamic_cast<const UnitBP*>(bp);
-        if(unit != nullptr) {
-            neededSupply+=unit->getSupplyCost();
+        if(bp->is_unit) {
+            neededSupply += static_cast<const UnitBP*>(bp)->getSupplyCost();
         }
         currentSupply+=bp->getSupplyProvided();
         dependencies.insert(bp->getName());
@@ -259,7 +259,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
     return true;
 }
 
-static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
+static bool redistributeWorkers(State &s, BuildingBP *bpToBuild, std::deque<EntityBP*> buildQueue) {
     bool buildingStarted = false;
 
     std::vector<WorkerInst *> idleWorkers;
@@ -273,6 +273,11 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
         } else if(!worker.second.isBusy()) {
             idleWorkers.push_back(&worker.second);
         }
+    }
+
+    int need_gas = 0;
+    for (EntityBP* bp : buildQueue) {
+        need_gas += bp->getCosts().getGas();
     }
 
     if (bpToBuild != nullptr) {
@@ -303,6 +308,18 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
     }
     size_t workerCount = idleWorkers.size() + mineralWorkers.size() + gasWorkers.size();
     size_t gasWorkerCount = std::min(workerCount - 1, gas.size() * 3);
+
+    if (!s.buildActions.empty() && s.buildActions.back().getStartPoint() == s.time) {
+        need_gas -= s.buildActions.back().getBlueprint()->getCosts().getGas();
+    }
+    if (need_gas <= s.resources.getGas()) {
+        for (auto worker : gasWorkers) {
+            idleWorkers.push_back(worker);
+        }
+        gasWorkers.clear();
+        gasWorkerCount = 0;
+    }
+
     size_t mineralWorkerCount = std::min(workerCount - gasWorkerCount, minerals.size() * 16);
 
     if (gasWorkers.size() < gasWorkerCount) {
@@ -338,7 +355,7 @@ static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialU
     simulation_all++;
     nlohmann::json j = getInitialJSON(race, valid);
 
-    std::queue<EntityBP*> buildOrder(initialUnits);
+    std::deque<EntityBP*> buildOrder(initialUnits);
 
     State curState(race, blueprints);
     j["initialUnits"] = curState.getUnitJSON();
@@ -371,7 +388,6 @@ static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialU
             bool buildStarted = false;
             if (canBuild && !buildOrder.empty()) {
                 auto buildNext = buildOrder.front();
-                auto unit = dynamic_cast<UnitBP*>(buildNext);
                 if (buildNext->getMorphedFrom().size()) {
                     // find a non-busy entity to upgrade/morph
                     curState.iterEntities([&](EntityInst &ent) {
@@ -380,25 +396,26 @@ static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialU
 
                         buildStarted = ent.startMorphing(buildNext, curState);
                     });
-                } else if(unit != nullptr) {
+                } else if(buildNext->is_unit) {
+                    auto unit = static_cast<UnitBP*>(buildNext);
                     // find a building where we can build the unit
                     curState.iterEntities([&](EntityInst &ent) {
-                        auto building = dynamic_cast<BuildingInst*>(&ent);
-                        if (buildStarted || building == nullptr)
+                        if (buildStarted || ent.getBlueprint()->is_unit)
                             return;
+                        auto building = static_cast<BuildingInst*>(&ent);
                         buildStarted = building->produceUnit(unit, curState);
                     });
                 } else {
                     // have redistributeWorkers() build the building
-                    workerTask = dynamic_cast<BuildingBP*>(buildNext);
-                    assert(workerTask != nullptr && "no idea how to build this thing");
+                    assert(!buildNext->is_unit && "no idea how to build this thing");
+                    workerTask = static_cast<BuildingBP*>(buildNext);
                 }
             }
 
             // timestep 4
-            buildStarted |= redistributeWorkers(curState, workerTask);
+            buildStarted |= redistributeWorkers(curState, workerTask, buildOrder);
             if (buildStarted)
-                buildOrder.pop();
+                buildOrder.pop_front();
 
             // timestep 5
             printJSON(curState, messages);
@@ -709,17 +726,6 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
 
     /* Remove the main building */
     buildlist.erase(buildlist.begin());
-    // build additional workers
-    std::uniform_int_distribution<> worker_dis(0, 21);
-    std::normal_distribution<> worker_pos_dis(0, buildlist.size() / 2);
-    size_t worker_count = worker_dis(gen);
-    for (size_t i = 0; i < worker_count; i++) {
-        size_t ins_idx = buildlist.size();
-        while (ins_idx >= buildlist.size()) {
-            ins_idx = std::floor(std::abs(worker_pos_dis(gen)));
-        }
-        buildlist.insert(buildlist.begin()+ins_idx, worker);
-    }
 
     // when can we start building queens/orbital commands?
     ssize_t min_ability_idx = -1;
@@ -811,6 +817,18 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         }
     }
 
+    // build additional workers
+    std::gamma_distribution<> worker_dis(7, 1.0);
+    std::normal_distribution<> worker_pos_dis(0, buildlist.size() / 2);
+    size_t worker_count = std::min(size_t { 21 }, (size_t)std::floor(worker_dis(gen)));
+    for (size_t i = 0; i < worker_count; i++) {
+        size_t ins_idx = buildlist.size();
+        while (ins_idx >= buildlist.size()) {
+            ins_idx = std::floor(std::abs(worker_pos_dis(gen)));
+        }
+        insert(ins_idx, worker, false);
+    }
+
     // supply
     std::uniform_int_distribution<> supply_dis(1, 3);
     int used_supply = 60;
@@ -894,7 +912,7 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
     return bestList;
 }
 
-#define TIMEOUT 20
+#define TIMEOUT 179
 #define SEED 1337
 
 int main(int argc, char *argv[]) {
