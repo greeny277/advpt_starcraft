@@ -72,7 +72,7 @@ spire,200,200,100,0,0,0,0,zerg,drone,,lair/hive,0,0,0,building
 # Terran #,,,,,,,,,,,
 ##########,,,,,,,,,,,
 scv,50,0,17,10,0,0,0,terran,,command_center/orbital_command/planetary_fortress,,1,0,0,unit
-marine,50,0,25,10,0,0,0,terran,,barracks/barracks_with_tech_lab/barracks_with_reactor,,0,0,0,unit
+marine,50,0,25,10,0,0,0,terran,,barracks/barracks_with_reactor/barracks_with_tech_lab,,0,0,0,unit
 marauder,100,25,30,20,0,0,0,terran,,barracks_with_tech_lab,,0,0,0,unit
 reaper,50,50,45,10,0,0,0,terran,,barracks_with_tech_lab,,0,0,0,unit
 ghost,200,100,40,20,0,0,0,terran,,barracks_with_tech_lab,ghost_academy,0,0,0,unit
@@ -86,19 +86,19 @@ banshee,150,100,60,30,0,0,0,terran,,starport_with_tech_lab,,0,0,0,unit
 battlecruiser,400,300,90,60,0,0,0,terran,,starport_with_tech_lab,fusion_core,0,0,0,unit
 #buildings,,,,,0,,,,,,
 command_center,400,0,100,0,110,0,0,terran,,scv,,0,0,12000,building
-orbital_command,150,0,35,0,110,50,200,terran,command_center,,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,12000,building
+orbital_command,150,0,35,0,110,50,200,terran,command_center,,barracks/barracks_with_reactor/barracks_with_tech_lab,0,0,12000,building
 planetary_fortress,150,150,50,0,110,0,0,terran,command_center,,engineering_bay,0,0,12000,building
 refinery,75,0,30,0,0,0,0,terran,,scv,,0,2500,0,building
 engineering_bay,125,0,35,0,0,0,0,terran,,scv,,0,0,0,building
 missile_turret,100,0,25,0,0,0,0,terran,,scv,engineering_bay,0,0,0,building
 sensor_tower,125,100,25,0,0,0,0,terran,,scv,engineering_bay,0,0,0,building
 barracks,150,0,65,0,0,0,0,terran,,scv,supply_depot,0,0,0,building
-factory,150,100,60,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
-armory,150,100,65,0,0,0,0,terran,,scv,factory/factory_with_tech_lab/factory_with_reactor,0,0,0,building
-bunker,100,0,35,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
-ghost_academy,150,50,40,0,0,0,0,terran,,scv,barracks/barracks_with_tech_lab/barracks_with_reactor,0,0,0,building
-starport,150,100,50,0,0,0,0,terran,,scv,factory/factory_with_tech_lab/factory_with_reactor,0,0,0,building
-fusion_core,150,150,65,0,0,0,0,terran,,scv,starport/starport_with_tech_lab/starport_with_reactor,0,0,0,building
+factory,150,100,60,0,0,0,0,terran,,scv,barracks/barracks_with_reactor/barracks_with_tech_lab,0,0,0,building
+armory,150,100,65,0,0,0,0,terran,,scv,factory/factory_with_reactor/factory_with_tech_lab,0,0,0,building
+bunker,100,0,35,0,0,0,0,terran,,scv,barracks/barracks_with_reactor/barracks_with_tech_lab,0,0,0,building
+ghost_academy,150,50,40,0,0,0,0,terran,,scv,barracks/barracks_with_reactor/barracks_with_tech_lab,0,0,0,building
+starport,150,100,50,0,0,0,0,terran,,scv,factory/factory_with_reactor/factory_with_tech_lab,0,0,0,building
+fusion_core,150,150,65,0,0,0,0,terran,,scv,starport/starport_with_reactor/starport_with_tech_lab,0,0,0,building
 supply_depot,100,0,30,0,80,0,0,terran,,scv,,0,0,0,building
 barracks_with_reactor,50,50,50,0,0,0,0,terran,barracks,,,0,0,0,building
 barracks_with_tech_lab,50,25,25,0,0,0,0,terran,barracks,,,0,0,0,building
