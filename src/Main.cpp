@@ -709,7 +709,6 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
 
     /* Remove the main building */
     buildlist.erase(buildlist.begin());
-    assert(buildlist[0] != (EntityBP*)0x111);
     // build additional workers
     std::uniform_int_distribution<> worker_dis(0, 21);
     std::normal_distribution<> worker_pos_dis(0, buildlist.size() / 2);
@@ -727,6 +726,10 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     bool want_gas = false;
     ssize_t gas_idx = -1;
     size_t first_prod_idx = ~0;
+    EntityBP *first_producer = nullptr;
+    if (!targetBP->getProducedByOneOf().empty())
+        first_producer = blueprints.at(targetBP->getProducedByOneOf().front()).get();
+
     for (size_t i = 0; i < buildlist.size(); i++) {
         if (buildlist[i] == abilityDependency && min_ability_idx == -1) {
             min_ability_idx = i + 1;
@@ -736,13 +739,13 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             if(gas_idx == -1)
                 gas_idx = i+1;
         }
-        if (!targetBP->getProducedByOneOf().empty() && buildlist[i]->getName() == targetBP->getProducedByOneOf().front() && first_prod_idx == ~0u) {
+        if (buildlist[i] == first_producer && first_prod_idx == ~ size_t { 0 }) {
             first_prod_idx = i;
         }
     }
-    assert(first_prod_idx != ~0u);
+    assert(first_prod_idx != ~ size_t { 0 });
 
-    auto insert = [&] (ssize_t idx, EntityBP *what) {
+    auto insert = [&] (ssize_t idx, EntityBP *what, bool insert_dependencies) {
         bool repeat = true;
         while (repeat) {
             repeat = false;
@@ -750,10 +753,13 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
                 min_ability_idx++;
             if (gas_idx >= idx && gas_idx != -1)
                 gas_idx++;
+            if (first_prod_idx >= (size_t)idx && first_prod_idx != ~size_t { 0 })
+                first_prod_idx++;
+
             buildlist.insert(buildlist.begin() + idx, what);
             if (!what->getMorphedFrom().empty()) {
                 what = blueprints.at(what->getMorphedFrom().front()).get();
-                repeat = true;
+                repeat = insert_dependencies;
             }
         }
     };
@@ -764,27 +770,27 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     std::bernoulli_distribution gas_dis(want_gas ? .9 : 0);
     // first queen / orbital command
     if (ability_dis(gen) && min_ability_idx != -1) {
-        insert(min_ability_idx, abilityEntity);
+        insert(min_ability_idx, abilityEntity, true);
         if(abilityEntity->getCosts().getGas() > 0){
             want_gas = true;
             gas_idx = min_ability_idx-1;
         }
     }
     if(want_gas && gas_dis(gen))
-        insert(gas_idx, gasBuilding);
+        insert(gas_idx, gasBuilding, true);
 
     // build additional bases + queens/orbital commands
     size_t main_building_count = main_building_dis(gen);
     for (size_t i = 1; i < main_building_count; i++) {
         ssize_t idx = main_building_pos(gen);
-        insert(idx, mainBuilding);
+        insert(idx, mainBuilding, true);
         if (ability_dis(gen) && min_ability_idx != -1) {
-            insert(std::max(min_ability_idx, idx) + 1, abilityEntity);
+            insert(std::max(min_ability_idx, idx) + 1, abilityEntity, true);
         }
         if (gas_dis(gen))
-            insert(idx + 1, gasBuilding);
+            insert(idx + 1, gasBuilding, true);
         if (gas_dis(gen))
-            insert(idx + 2, gasBuilding);
+            insert(idx + 2, gasBuilding, true);
     }
 
     // additional production buildings
@@ -800,7 +806,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         for (size_t pos : prod_indices) {
             size_t prod_idx = targetBP->getProducedByOneOf().size() > 1 ? (i % 2) : 0;
             std::string producer = targetBP->getProducedByOneOf().at(prod_idx);
-            insert(pos + i, blueprints.at(producer).get());
+            insert(pos + i, blueprints.at(producer).get(), false);
             i++;
         }
     }
@@ -811,7 +817,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     int max_supply = 100;
     for (ssize_t i = 0; i < (ssize_t)buildlist.size(); i++) {
         if(!want_gas && buildlist[i]->getCosts().getGas() > 0){
-            insert(std::max(ssize_t { 0l }, i - supply_dis(gen)), gasBuilding);
+            insert(std::max(ssize_t { 0l }, i - supply_dis(gen)), gasBuilding, true);
             want_gas = true;
         }
 
@@ -821,7 +827,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         // TODO: morphing
         max_supply += buildlist[i]->getSupplyProvided();
         if(max_supply < used_supply){
-            insert(std::max(ssize_t { 0 }, i - supply_dis(gen)), supplyEntity);
+            insert(std::max(ssize_t { 0 }, i - supply_dis(gen)), supplyEntity, true);
             max_supply += supplyEntity->getSupplyProvided();
         }
     }
