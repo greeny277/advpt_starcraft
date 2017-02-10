@@ -82,6 +82,9 @@ BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
 
     // change state
     s.resources -= blueprint->getCosts();
+    if(blueprint->getName() == "zergling"){
+        s.adjustSupply(blueprint, true);
+    }
     s.adjustSupply(blueprint, true);
 }
 

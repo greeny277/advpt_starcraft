@@ -749,7 +749,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             first_prod_idx = i;
         }
     }
-    assert(first_prod_idx != ~ size_t { 0 });
+    assert(first_prod_idx != ~ size_t { 0 } || first_producer == nullptr);
 
     auto insert = [&] (ssize_t idx, EntityBP *what, bool insert_dependencies) {
         bool repeat = true;
@@ -801,8 +801,8 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
 
     // additional production buildings
     std::normal_distribution<double> prod_dis(0, std::max(targetCount / 3., 2.));
-    if (first_prod_idx != ~0u) {
-        std::uniform_int_distribution<> prod_pos((size_t)first_prod_idx, buildlist.size() - 1);
+    if (first_prod_idx != ~size_t { 0 }) {
+        std::uniform_int_distribution<> prod_pos(first_prod_idx, buildlist.size() - 1);
         double prod_cnt = std::round(prod_dis(gen));
         std::multiset<size_t> prod_indices;
         for (size_t i = 0; i < prod_cnt; i++) {
@@ -841,10 +841,19 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
 
         if (buildlist[i]->is_unit) {
             used_supply += static_cast<UnitBP*>(buildlist[i])->getSupplyCost();
+            if (buildlist[i]->getName() == "zergling") {
+                used_supply += static_cast<UnitBP*>(buildlist[i])->getSupplyCost();
+            }
         }
-        // TODO: morphing
+        if (!buildlist[i]->getMorphedFrom().empty()) {
+            EntityBP *morph = blueprints.at(buildlist[i]->getMorphedFrom().front()).get();
+            if (morph->is_unit) {
+                used_supply -= static_cast<UnitBP*>(morph)->getSupplyCost();
+            }
+            max_supply -= morph->getSupplyProvided();
+        }
         max_supply += buildlist[i]->getSupplyProvided();
-        if(max_supply < used_supply){
+        if(max_supply < used_supply) {
             insert(std::max(ssize_t { 0 }, i - supply_dis(gen)), supplyEntity, true);
             max_supply += supplyEntity->getSupplyProvided();
         }
@@ -905,9 +914,9 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
             }
         }
     }
-    std::cout << "Builded units: " << curCount-1 << std::endl;
+    std::cerr << "Builded units: " << curCount-1 << std::endl;
     for (EntityBP* bp : bestBuildList)
-      std::cout << bp->getName() << std::endl;
+      std::cerr << bp->getName() << std::endl;
 
     return bestList;
 }
