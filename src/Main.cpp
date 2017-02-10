@@ -422,6 +422,11 @@ static std::vector<State> simulate(std::deque<EntityBP*> &initialUnits, std::str
             valid = false;
             j["buildlistValid"] = 0;
             valid = false;
+            auto buildlist = nlohmann::json::array();
+            for (EntityBP* bp : initialUnits) {
+                buildlist.push_back(bp->getName());
+            }
+            j["buildlist_debug"] = buildlist;
         } else {
             j["messages"] = messages;
         }
@@ -819,6 +824,15 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             max_supply += supplyEntity->getSupplyProvided();
         }
     }
+
+    auto larva = blueprints.at("larva").get();
+    for (size_t i = 0; i < buildlist.size(); i++) {
+        if (buildlist[i] == larva) {
+            buildlist.erase(buildlist.begin() + i);
+            i--;
+        }
+    }
+
     return buildlist;
 }
 
