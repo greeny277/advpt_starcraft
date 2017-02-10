@@ -46,13 +46,35 @@ public:
     void addBuildingInst(BuildingInst);
     void addUnitInst(UnitInst);
     void addResourceInst(ResourceInst);
-    void iterEntities(std::function<void(EntityInst&)>);
-    void iterEntities(std::function<void(const EntityInst&)>) const;
+    template <typename T>
+    void iterEntities(T);
+    template <typename T>
+    void iterEntities(T) const;
     void eraseEntity(int id);
     EntityInst *getEntity(int id);
     void moveEntity(int old_id, int new_id);
 
     inline int computeUsedSupply() const { return usedSupply; };
     inline int computeMaxSupply() const { return std::min(2000, maxSupply); };
-    void adjustSupply(EntityBP*);
+    void adjustSupply(const EntityBP*);
 };
+template <typename T>
+inline void State::iterEntities(T f) {
+    for(auto& i : workerMap) {
+        f(i.second);
+    }
+    for(auto& i : unitMap) {
+        f(i.second);
+    }
+    for(auto& i : buildingMap) {
+        f(i.second);
+    }
+    for(auto& i : resourceMap) {
+        f(i.second);
+    }
+}
+template <typename T>
+inline void State::iterEntities(T f) const {
+    auto callback = [&] (EntityInst &ent) { f(const_cast<EntityInst&>(ent)); };
+    const_cast<State*>(this)->iterEntities(callback);
+}

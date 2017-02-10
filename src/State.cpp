@@ -32,17 +32,17 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
             mainBuildingID = blueprints.at("hatchery").get()->newInstance(*this);
             EntityBP *overlord = blueprints.at("overlord").get();
             overlord->newInstance(*this);
-            maxSupply += overlord->getSupplyProvided();
+            adjustSupply(overlord);
         } else {
             assert(false);
         }
         ResourceInst &mainBuilding = getResources().at(mainBuildingID);
-        maxSupply += mainBuilding.getBlueprint()->getSupplyProvided();
+        adjustSupply(mainBuilding.getBlueprint());
         const UnitBP *worker = static_cast<const UnitBP*>(blueprints.at(workerName).get());
         for (size_t i = 0; i < 6; i++) {
             int workerID = worker->newInstance(*this);
             getWorkers().at(workerID).assignToResource(mainBuilding, *this);
-            usedSupply += worker->getSupplyProvided();
+            adjustSupply(worker);
         }
 }
 nlohmann::json State::getUnitJSON(){
@@ -56,24 +56,6 @@ nlohmann::json State::getUnitJSON(){
         units[name].push_back(std::to_string(inst.getID()));
     });
     return units;
-}
-void State::iterEntities(std::function<void(EntityInst&)> f) {
-    for(auto& i : workerMap) {
-        f(i.second);
-    }
-    for(auto& i : unitMap) {
-        f(i.second);
-    }
-    for(auto& i : buildingMap) {
-        f(i.second);
-    }
-    for(auto& i : resourceMap) {
-        f(i.second);
-    }
-}
-void State::iterEntities(std::function<void(const EntityInst&)> f) const {
-    auto callback = [&] (EntityInst &ent) { f(const_cast<EntityInst&>(ent)); };
-    const_cast<State*>(this)->iterEntities(callback);
 }
 
 std::unordered_map<int,WorkerInst>& State::getWorkers(){
@@ -139,16 +121,16 @@ EntityInst *State::getEntity(int id) {
         return &rent->second;
     return nullptr;
 }
-void State::adjustSupply(EntityBP*entity) {
+void State::adjustSupply(const EntityBP*entity) {
     if (!entity->getMorphedFrom().empty()) {
-        if (auto morph_unit = dynamic_cast<UnitBP*>(blueprints.at(entity->getMorphedFrom().front()).get())) {
-            usedSupply -= morph_unit->getSupplyCost();
+        auto &front = blueprints.at(entity->getMorphedFrom().front());
+        if (front->is_unit) {
+            usedSupply -= static_cast<const UnitBP*>(front.get())->getSupplyCost();
         }
-        if (auto morph_building = dynamic_cast<UnitBP*>(blueprints.at(entity->getMorphedFrom().front()).get())) {
-            maxSupply -= morph_building->getSupplyProvided();
-        }
+        maxSupply -= front->getSupplyProvided();
     }
-    if (auto unit = dynamic_cast<UnitBP*>(entity)) {
+    if (entity->is_unit) {
+        auto unit = static_cast<const UnitBP*>(entity);
         usedSupply += unit->getSupplyCost();
     }
     maxSupply += entity->getSupplyProvided();

@@ -33,7 +33,7 @@ static std::vector<Ability*> createAbilities(const std::string &name) {
     return abilities;
 }
 
-EntityBP::EntityBP(std::string data[15]) :
+EntityBP::EntityBP(std::string data[15], bool is_unit_) :
     name(data[0]),
     race(data[8]),
     startEnergy(std::stoi(data[6])),
@@ -44,7 +44,9 @@ EntityBP::EntityBP(std::string data[15]) :
     requireOneOf(parseRequirements(data[11])),
     producedByOneOf(parseRequirements(data[10])),
     morphedFrom(data[9].empty() ? std::vector<std::string>{} : std::vector<std::string>{data[9]}),
-    supplyProvided(std::stoi(data[5])) {
+    supplyProvided(std::stoi(data[5])),
+    is_unit(is_unit_),
+    is_worker(is_unit ? static_cast<UnitBP*>(this)->isWorker : false) {
 }
 
 const std::string & EntityBP::getName() const { return name; }
@@ -60,7 +62,7 @@ const std::vector<std::string>& EntityBP::getMorphedFrom() const { return morphe
 int EntityBP::getSupplyProvided() const { return supplyProvided; }
 
 UnitBP::UnitBP(std::string data[15]) :
-    EntityBP(data),
+    EntityBP(data, true),
     supplyCost(std::stoi(data[4])),
     isWorker(std::stoi(data[12])==1) {
 }
@@ -82,7 +84,7 @@ int UnitBP::newInstance(State &state) const {
 
 
 BuildingBP::BuildingBP(std::string data[15]) :
-    EntityBP(data),
+    EntityBP(data, false),
     buildSlots(name.rfind("_with_reactor") == std::string::npos ? 1 : 2),
     startResources(std::stoi(data[13]), std::stoi(data[14])) {
 }

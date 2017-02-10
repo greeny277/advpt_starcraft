@@ -79,9 +79,6 @@ void resourceUpdate(State &state) {
     for (auto &res : state.getResources()) {
         state.resources += res.second.mine();
     }
-    state.iterEntities([&](EntityInst& ent) {
-        ent.restoreEnergy();
-    });
 }
 
 void larvaeUpdate(State &state) {
@@ -171,15 +168,14 @@ static void checkActions(std::vector<T>& actions, State& s){
 static bool checkAndRunAbilities(State &s) {
     bool result = false;
     s.iterEntities([&](EntityInst& e) {
-            for (const Ability *ab : e.getBlueprint()->getAbilities()) {
-            if (e.getCurrentEnergy() >= ab->energyCosts && !result) {
-            if (ab->create(s, e.getID())) {
-            e.removeEnergy(ab->energyCosts);
-            result = true;
+        e.restoreEnergy();
+        for (const Ability *ab : e.getBlueprint()->getAbilities()) {
+            if (e.getCurrentEnergy() >= ab->energyCosts && !result && ab->create(s, e.getID())) {
+                e.removeEnergy(ab->energyCosts);
+                result = true;
             }
-            }
-            }
-            });
+        }
+    });
     return result;
 }
 
@@ -188,8 +184,8 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
     State s(race, blueprints);
     std::unordered_multiset<std::string> dependencies;
     s.iterEntities([&](const EntityInst &ent) {
-            dependencies.insert(ent.getBlueprint()->getName());
-            });
+        dependencies.insert(ent.getBlueprint()->getName());
+    });
 
     int vespInst = 0, bases = 1;
     int currentSupply = s.computeMaxSupply(); // 1 base = 10 supply
@@ -379,20 +375,19 @@ static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialU
                 if (buildNext->getMorphedFrom().size()) {
                     // find a non-busy entity to upgrade/morph
                     curState.iterEntities([&](EntityInst &ent) {
-
-                            if (buildStarted)
+                        if (buildStarted)
                             return;
 
-                            buildStarted = ent.startMorphing(buildNext, curState);
-                            });
+                        buildStarted = ent.startMorphing(buildNext, curState);
+                    });
                 } else if(unit != nullptr) {
                     // find a building where we can build the unit
                     curState.iterEntities([&](EntityInst &ent) {
-                            auto building = dynamic_cast<BuildingInst*>(&ent);
-                            if (buildStarted || building == nullptr)
+                        auto building = dynamic_cast<BuildingInst*>(&ent);
+                        if (buildStarted || building == nullptr)
                             return;
-                            buildStarted = building->produceUnit(unit, curState);
-                            });
+                        buildStarted = building->produceUnit(unit, curState);
+                    });
                 } else {
                     // have redistributeWorkers() build the building
                     workerTask = dynamic_cast<BuildingBP*>(buildNext);
@@ -871,7 +866,8 @@ int main(int argc, char *argv[]) {
             if(initialUnits.empty()) {
                 std::cerr << "Invalid build order?" << std::endl;
             }
-            simulate(initialUnits, race);
+            auto j = simulate(initialUnits, race).second;
+            std::cout << j.dump(4) << std::endl;
         }
     } else if (argc == 4 && std::strcmp(argv[1], "rush") == 0) {
         auto unitBP = blueprints.at(argv[2]).get();
@@ -883,7 +879,7 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 179);
+        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 1);
         std::cout << j.dump(4) << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());

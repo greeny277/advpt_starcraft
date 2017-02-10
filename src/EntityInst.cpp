@@ -37,9 +37,9 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s, const UnitBP
     }
 
     // check supply
-    if (auto unit = dynamic_cast<UnitBP *>(entity)) {
+    if (entity->is_unit) {
         int supplyUsed = s.computeUsedSupply();
-        supplyUsed += unit->getSupplyCost();
+        supplyUsed += static_cast<UnitBP *>(entity)->getSupplyCost();
         if (morphedFrom != nullptr) {
             supplyUsed -= morphedFrom->getSupplyCost();
         }
@@ -54,20 +54,21 @@ bool EntityInst::isMorphing() const {
 }
 
 bool EntityInst::startMorphing(EntityBP *entity, State &s) {
-    if (!checkBuildRequirements(entity, s, dynamic_cast<const UnitBP*>(getBlueprint())) || !canMorph())
+    const EntityBP *bp = getBlueprint();
+    if (!checkBuildRequirements(entity, s, bp->is_unit ? static_cast<const UnitBP*>(getBlueprint()) : nullptr) || !canMorph())
     {
         return false;
     }
     bool foundBp = false;
-    for (auto bp : entity->getMorphedFrom()) {
-        if (blueprint->getName() == bp)
+    for (auto morph : entity->getMorphedFrom()) {
+        if (blueprint->getName() == morph)
             foundBp = true;
     }
     if (!foundBp){
         return false;
     }
-    if (auto worker = dynamic_cast<WorkerInst *>(this)) {
-        worker->stopMining(s);
+    if (bp->is_worker) {
+        static_cast<WorkerInst *>(this)->stopMining(s);
     }
 
     s.buildActions.push_back(BuildEntityAction(entity, -1, getID(), s));
