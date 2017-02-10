@@ -849,7 +849,7 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, std::pair<std::array<Enti
         if(elapsed.count() >= timeout) {
             break;
         }
-        auto newList = addUsefulStuffToBuildlist(gen, buildlist, targetBP, targetCount);
+        auto newList = addUsefulStuffToBuildlist(gen, topSort(gen, adj), targetBP, targetCount);
         std::deque<EntityBP*> deqList(newList.begin(), newList.end());
         auto buildlist_info = simulate(deqList, targetBP->getRace());
         int valid = buildlist_info.second["buildlistValid"];
@@ -894,7 +894,7 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 1000);
+        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 10);
         std::cout << j.dump(4) << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
@@ -907,17 +907,8 @@ int main(int argc, char *argv[]) {
         std::cout << "}";
 
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 10000);
+        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 10);
         std::cout << j.dump(4) << std::endl;
-
-        for (auto bp : buildlist) {
-            std::cerr << bp->getName() << std::endl;
-        }
-        std::cerr << std::endl << std::endl;
-        buildlist = addUsefulStuffToBuildlist(gen, topSort(gen, adj), unitBP, 4);
-        for (auto bp : buildlist) {
-            std::cerr << bp->getName() << std::endl;
-        }
     } else {
         usage(argv);
     }
