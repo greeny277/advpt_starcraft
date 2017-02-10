@@ -8,6 +8,7 @@
 #include <queue>
 #include <string>
 #include <random>
+#include <chrono>
 
 #include "json.hpp"
 
@@ -838,8 +839,14 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, std::pair<std::array<Enti
     nlohmann::json bestList;
     int bestFitness = -1;
 
-    for ( int i = 0; i < timeout; ++i ){
-        auto newList = addUsefulStuffToBuildlist(gen, topSort(gen,adj), targetBP, targetCount);
+    auto start = std::chrono::system_clock::now();
+    while(1){
+        auto current = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current - start);
+        if(elapsed.count() >= timeout) {
+            break;
+        }
+        auto newList = addUsefulStuffToBuildlist(gen, topSort(gen, adj), targetBP, targetCount);
         std::deque<EntityBP*> deqList(newList.begin(), newList.end());
         auto buildlist_info = simulate(deqList, targetBP->getRace());
         int valid = buildlist_info.second["buildlistValid"];
@@ -884,7 +891,7 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 100);
+        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 10);
         std::cout << j.dump(4) << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
@@ -897,9 +904,8 @@ int main(int argc, char *argv[]) {
         std::cout << "}";
 
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 100);
+        auto j = optimizerLoop(gen, adj, unitBP, 4, "push", 10);
         std::cout << j.dump(4) << std::endl;
-
     } else {
         usage(argv);
     }
