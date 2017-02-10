@@ -124,15 +124,12 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     actionsToJSON(curState.chronoActions, events, curState.time);
     int mineralWorkers = 0;
     int gasWorkers = 0;
-    curState.iterEntities([&](EntityInst& entity) {
-            auto res = dynamic_cast<const ResourceInst*>(&entity);
-            if (res != nullptr) {
-            if (res->isMinerals())
-            mineralWorkers += res->getActiveWorkerCount();
-            if (res->isGas())
-            gasWorkers += res->getActiveWorkerCount();
-            }
-            });
+    for (auto &res : curState.getResources()) {
+        if (res.second.isMinerals())
+            mineralWorkers += res.second.getActiveWorkerCount();
+        if (res.second.isGas())
+            gasWorkers += res.second.getActiveWorkerCount();
+    }
     if (events.size() == 0 && mineralWorkers == lastMineralWorkers && gasWorkers == lastGasWorkers) {
         return;
     }
