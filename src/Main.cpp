@@ -337,27 +337,21 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild) {
 
 static int simulation_all, simulation_fail;
 
-static std::pair<std::vector<State>, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
+static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
     bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race);
     simulation_all++;
     nlohmann::json j = getInitialJSON(race, valid);
 
     std::queue<EntityBP*> buildOrder(initialUnits);
 
-    std::vector<State> states;
+    State curState(race, blueprints);
+    j["initialUnits"] = curState.getUnitJSON();
 
     if (valid) {
         auto messages = nlohmann::json::array();
 
         bool stillBuilding = false;
-        while (states.size() < 1000 && (stillBuilding || !buildOrder.empty())) {
-            if (states.empty()) {
-                states.push_back(State(race, blueprints));
-                j["initialUnits"] = states.back().getUnitJSON();
-            } else {
-                states.push_back(states.back());
-            }
-            State &curState = states.back();
+        while (curState.time < 1000 && (stillBuilding || !buildOrder.empty())) {
             // increment time attribute
             curState.time++;
 
@@ -432,7 +426,7 @@ static std::pair<std::vector<State>, nlohmann::json> simulate(std::deque<EntityB
     }
 
     //std::cout << j.dump(4) << std::endl;
-    return make_pair(states, j);
+    return make_pair(curState, j);
 }
 
 [[noreturn]] static void usage(char *argv[]) {
@@ -444,19 +438,17 @@ struct fitness {
     int targetCount;
     int timeProceeded;
 };
-static struct fitness get_fitness(std::vector<State> &states, UnitBP* targetBP) {
+static struct fitness get_fitness(State &state, UnitBP* targetBP) {
     struct fitness res = {
         0,
         0,
     };
 
-    res.timeProceeded = states.back().time;
+    res.timeProceeded = state.time;
 
-    for (size_t i = 0; i < states.size(); i++) {
-        for (auto &unit : states[i].getUnits()) {
-            if (unit.second.getBlueprint() == targetBP)
-                res.targetCount++;
-        }
+    for (auto &unit : state.getUnits()) {
+        if (unit.second.getBlueprint() == targetBP)
+            res.targetCount++;
     }
 
     return res;
@@ -891,7 +883,7 @@ int main(int argc, char *argv[]) {
         weightFixing(dep_graph);
         auto adj = graphtransformation(dep_graph);
         std::mt19937 gen(1337);
-        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 60);
+        auto j = optimizerLoop(gen, adj, unitBP, count, argv[1], 179);
         std::cout << j.dump(4) << std::endl;
     } else if (argc == 3 && std::strcmp(argv[1], "dump") == 0) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
