@@ -180,8 +180,7 @@ static bool checkAndRunAbilities(State &s) {
 }
 
 
-static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race) {
-    State s(race, blueprints);
+static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race, const State &s) {
     std::unordered_multiset<std::string> dependencies;
     s.iterEntities([&](const EntityInst &ent) {
         dependencies.insert(ent.getBlueprint()->getName());
@@ -240,21 +239,26 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
                 } else {
                     vespInst++;
                 }
-            } else if (building->startResources.getMinerals()) {
+            } else if (building->startResources.getMinerals() && (building->getMorphedFrom().empty() || blueprints.at(building->getMorphedFrom().front())->is_unit)) {
                 bases++;
             }
         }
         if(bp->is_unit) {
             neededSupply += static_cast<const UnitBP*>(bp)->getSupplyCost();
         }
+        if (!bp->getMorphedFrom().empty()) {
+            auto morph = blueprints.at(bp->getMorphedFrom().front()).get();
+            if (morph->is_unit) {
+                neededSupply -= static_cast<const UnitBP*>(morph)->getSupplyCost();
+            }
+        }
         currentSupply+=bp->getSupplyProvided();
         dependencies.insert(bp->getName());
 
-    }
-
-    if(neededSupply > currentSupply) {
-        std::cerr << "not enough supplies to build new units, needed: " << neededSupply << " provided: " << currentSupply << std::endl;
-        return false;
+        if(neededSupply > currentSupply) {
+            std::cerr << "not enough supplies to build new units, needed: " << neededSupply << " provided: " << currentSupply << std::endl;
+            return false;
+        }
     }
     return true;
 }
@@ -350,21 +354,21 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild, std::deque<Enti
 
 static int simulation_all, simulation_fail;
 
-static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race) {
-    bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race);
+static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race, int timeout) {
+    State curState(race, blueprints);
+    bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race, curState);
     simulation_all++;
     nlohmann::json j = getInitialJSON(race, valid);
 
     std::deque<EntityBP*> buildOrder(initialUnits);
 
-    State curState(race, blueprints);
     j["initialUnits"] = curState.getUnitJSON();
 
     if (valid) {
         auto messages = nlohmann::json::array();
 
         bool stillBuilding = false;
-        while (curState.time < 1000 && (stillBuilding || !buildOrder.empty())) {
+        while (curState.time < timeout && (stillBuilding || !buildOrder.empty())) {
             // increment time attribute
             curState.time++;
 
@@ -424,7 +428,7 @@ static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialU
         }
 
         if (!buildOrder.empty()) {
-            std::cerr << "Build order could not be finished." << std::endl;
+            //std::cerr << "Build order could not be finished." << std::endl;
             valid = false;
             j["buildlistValid"] = 0;
             valid = false;
@@ -740,10 +744,9 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         if (buildlist[i] == abilityDependency && min_ability_idx == -1) {
             min_ability_idx = i + 1;
         }
-        if (buildlist[i] == gasBuilding) {
+        if (buildlist[i] == gasBuilding && gas_idx == -1) {
             want_gas = true;
-            if(gas_idx == -1)
-                gas_idx = i+1;
+            gas_idx = i+1;
         }
         if (buildlist[i] == first_producer && first_prod_idx == ~ size_t { 0 }) {
             first_prod_idx = i;
@@ -770,7 +773,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         }
     };
 
-    std::uniform_int_distribution<> main_building_dis(0, 2);
+    std::uniform_int_distribution<> main_building_dis(1, 3);
     std::uniform_int_distribution<> main_building_pos(buildlist.size()/2, buildlist.size() - 1);
     std::bernoulli_distribution ability_dis(abilityEntity == nullptr ? 0 : .9);
     std::bernoulli_distribution gas_dis(want_gas ? .9 : 0);
@@ -782,22 +785,36 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             gas_idx = min_ability_idx-1;
         }
     }
-    if(want_gas && gas_dis(gen))
+    if(gas_dis(gen))
         insert(gas_idx, gasBuilding, true);
+
+    size_t extrac_cnt = 0;
+    for (size_t i = 0; i < buildlist.size(); i++) {
+        if (buildlist[i] == gasBuilding)
+            extrac_cnt++;
+    }
+    assert(extrac_cnt < 3);
 
     // build additional bases + queens/orbital commands
     size_t main_building_count = main_building_dis(gen);
     for (size_t i = 1; i < main_building_count; i++) {
         ssize_t idx = main_building_pos(gen);
-        insert(idx, mainBuilding, true);
         if (ability_dis(gen) && min_ability_idx != -1) {
-            insert(std::max(min_ability_idx, idx) + 1, abilityEntity, true);
+            insert(std::max(min_ability_idx, idx), abilityEntity, true);
         }
         if (gas_dis(gen))
-            insert(idx + 1, gasBuilding, true);
+            insert(idx, gasBuilding, true);
         if (gas_dis(gen))
-            insert(idx + 2, gasBuilding, true);
+            insert(idx, gasBuilding, true);
+        insert(idx, mainBuilding, true);
     }
+
+    extrac_cnt = 0;
+    for (size_t i = 0; i < buildlist.size(); i++) {
+        if (buildlist[i] == gasBuilding)
+            extrac_cnt++;
+    }
+    assert(extrac_cnt / 2 <= main_building_count);
 
     // additional production buildings
     std::normal_distribution<double> prod_dis(0, std::max(targetCount / 3., 2.));
@@ -858,6 +875,8 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             max_supply += supplyEntity->getSupplyProvided();
         }
     }
+    if (used_supply > 2000)
+        buildlist.clear();
 
     auto larva = blueprints.at("larva").get();
     for (size_t i = 0; i < buildlist.size(); i++) {
@@ -888,8 +907,11 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
             break;
         }
         auto newList = addUsefulStuffToBuildlist(gen, topSort(gen, adj), targetBP, targetCount);
+        if (newList.empty())
+            continue;
+
         std::deque<EntityBP*> deqList(newList.begin(), newList.end());
-        auto buildlist_info = simulate(deqList, targetBP->getRace());
+        auto buildlist_info = simulate(deqList, targetBP->getRace(), timebarrier);
         int valid = buildlist_info.second["buildlistValid"];
         if(valid){
             int curFitness;
@@ -932,7 +954,7 @@ int main(int argc, char *argv[]) {
             if(initialUnits.empty()) {
                 std::cerr << "Invalid build order?" << std::endl;
             }
-            auto j = simulate(initialUnits, race).second;
+            auto j = simulate(initialUnits, race, 1000).second;
             std::cout << j.dump(4) << std::endl;
         }
     } else if (argc == 4 && std::strcmp(argv[1], "rush") == 0) {
@@ -945,7 +967,7 @@ int main(int argc, char *argv[]) {
         auto unitBP = dynamic_cast<UnitBP*>(blueprints.at(argv[2]).get());
         int count = std::atoi(argv[3]);
         std::mt19937 gen(SEED);
-        auto j = optimizerLoop(gen, unitBP, count, argv[1], TIMEOUT, -1);
+        auto j = optimizerLoop(gen, unitBP, count, argv[1], TIMEOUT, 1000);
         std::cout << j.dump(4) << std::endl;
     } else {
         usage(argv);

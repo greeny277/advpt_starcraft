@@ -264,6 +264,7 @@ void ResourceInst::copyRemainingResources(ResourceInst &other) {
     int workers = other.activeWorkerSlots;
     activeWorkerSlots = workers;
     other.activeWorkerSlots = 0;
+    inject = other.inject;
 }
 
 WorkerInst::WorkerInst(const UnitBP *unit) :

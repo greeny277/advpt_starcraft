@@ -20,21 +20,18 @@ InjectAbility::InjectAbility() : Ability(25) {
 bool InjectAbility::create(State &s, int triggeredBy) const {
     /* Find a fitting hatchery with the biggest amount of larvae slots */
     int targetBuilding = -1;
-    s.iterEntities([&](EntityInst& ent) {
-        ResourceInst* res = dynamic_cast<ResourceInst*>(&ent);
-        if(res != nullptr){
-            auto name = res->getBlueprint()->getName();
-            auto larvaeProducer = {"hatchery","lair","hive"};
-            auto r = find(larvaeProducer.begin(), larvaeProducer.end(),name);
-            if (r != larvaeProducer.end()) {
-                if(res->canInject() && targetBuilding == -1){
-                    targetBuilding = res->getID();
-                    res->startInject();
-                }
-            }
+    for (auto &resp : s.getResources()) {
+        ResourceInst& res = resp.second;
+        auto name = res.getBlueprint()->getName();
+        auto larvaeProducer = {"hatchery","lair","hive"};
+        auto r = find(larvaeProducer.begin(), larvaeProducer.end(),name);
+        if (r != larvaeProducer.end() && res.canInject()){
+            targetBuilding = res.getID();
+            res.startInject();
+            break;
         }
+    }
 
-    });
     if(targetBuilding != -1){
         s.injectActions.push_back(InjectAction(s.time, triggeredBy, targetBuilding));
         return true;
