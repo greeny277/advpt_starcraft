@@ -280,7 +280,7 @@ static bool validateBuildOrder(const std::deque<const EntityBP*> &initialUnits, 
     return true;
 }
 
-static bool redistributeWorkers(State &s, const BuildingBP *bpToBuild, std::deque<const EntityBP*> buildQueue) {
+static bool redistributeWorkers(State &s, const BuildingBP *bpToBuild, const std::deque<const EntityBP*> &buildQueue) {
     bool buildingStarted = false;
 
     std::vector<WorkerInst *> idleWorkers;
@@ -371,7 +371,7 @@ static bool redistributeWorkers(State &s, const BuildingBP *bpToBuild, std::dequ
 
 static int simulation_all, simulation_fail;
 
-static std::pair<State, bool> simulate(std::deque<const EntityBP*> buildOrder, const Race race, int timeout, nlohmann::json *j) {
+static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, const Race race, int timeout, nlohmann::json *j) {
     State curState(race, blueprints);
     bool valid = !buildOrder.empty() && validateBuildOrder(buildOrder, race, curState);
     simulation_all++;
