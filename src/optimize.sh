@@ -1,3 +1,3 @@
 #!/bin/sh
 
-exec build/SC2BuildSimulator $@
+exec build/SC2BuildSimulator $@ 2>/dev/null
