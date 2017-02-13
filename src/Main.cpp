@@ -860,10 +860,27 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
 
     auto larva = blueprints.at("larva").get();
+    int gas_counter = 0;
+    int main_building_counter = 1;
     for (size_t i = 0; i < buildlist.size(); i++) {
+        if(buildlist[i] == mainBuilding){
+            main_building_counter++;
+            continue;
+        }
+
+        if(buildlist[i] == gasBuilding){
+            gas_counter++;
+            if(gas_counter > main_building_counter*2){
+                buildlist.erase(buildlist.begin() + i);
+                gas_counter--;
+                i--;
+            }
+            continue;
+        }
         if (buildlist[i] == larva) {
             buildlist.erase(buildlist.begin() + i);
             i--;
+            continue;
         }
     }
 
