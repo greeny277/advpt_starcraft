@@ -26,13 +26,13 @@ public:
     std::vector<InjectAction> injectActions;
     std::vector<BuildEntityAction> buildActions;
     const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints;
-    std::unordered_multiset<std::string> alreadyProduced; // Keeps track of currently existing entities by name
+    std::unordered_multiset<const EntityBP*> alreadyProduced; // Keeps track of currently existing entities by name
 
     int usedSupply;
     int maxSupply;
 
 public:
-    State(const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints);
+    State(const Race race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints);
     nlohmann::json getUnitJSON();
     std::unordered_map<int, WorkerInst>& getWorkers();
     std::unordered_map<int, BuildingInst>& getBuildings();

@@ -19,33 +19,56 @@
 #include "Ability.h"
 #include "Helper.h"
 
+static void parseRequirements(const std::string &requirements, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &bps, std::vector<EntityBP*> &requireOneOf) {
+    std::stringstream requirementStream(requirements);
+    std::string req;
+    while (std::getline(requirementStream, req, '/')) {
+        if (!req.empty()) {
+            requireOneOf.push_back(bps.at(req).get());
+        }
+    }
+}
 
 std::unordered_map<std::string, std::unique_ptr<EntityBP>> readConfig() {
     std::unordered_map<std::string, std::unique_ptr<EntityBP>> res;
 
     std::string line;
     std::string race;
-    std::fstream csv("techtree.csv", std::ios::in);
-    while(std::getline(csv, line)) {
-        if (line[0] == '#') {
-            continue;
-        }
 
-        std::string cells[16];
-        std::stringstream lineStream(line);
-        size_t i;
-        for (i = 0; std::getline(lineStream, cells[i], ',') && i < 16; i++) {
-        }
+    for (size_t i = 0; i < 2; i++) {
+        std::fstream csv("techtree.csv", std::ios::in);
+        while(std::getline(csv, line)) {
+            if (line[0] == '#') {
+                continue;
+            }
 
-        EntityBP* ent;
-        if (cells[15] == "building") {
-            ent = new BuildingBP(cells);
-        } else {
-            ent = new UnitBP(cells);
-        }
-        res.emplace(cells[0], std::unique_ptr<EntityBP>(ent));
+            std::string cells[16];
+            std::stringstream lineStream(line);
+            for (size_t j = 0; std::getline(lineStream, cells[j], ',') && j < 16; j++) {
+            }
 
+            if (i == 0) {
+                EntityBP* ent;
+                if (cells[15] == "building") {
+                    ent = new BuildingBP(cells);
+                } else {
+                    ent = new UnitBP(cells);
+                }
+                res.emplace(cells[0], std::unique_ptr<EntityBP>(ent));
+            } else {
+                std::string &name = cells[0];
+                std::string requireOneOf = cells[11];
+                std::string producedByOneOf = cells[10];
+                std::string morphedFrom = cells[9];
+
+                if (!morphedFrom.empty())
+                    res.at(name)->getMorphedFrom().push_back(res.at(morphedFrom).get());
+                parseRequirements(requireOneOf, res, res.at(name)->getRequireOneOf());
+                parseRequirements(producedByOneOf, res, res.at(name)->getProducedByOneOf());
+            }
+        }
     }
+
     if (res.empty()) {
         std::cerr << "Failed to parse CSV file." << std::endl;
         exit(EXIT_FAILURE);
@@ -55,8 +78,8 @@ std::unordered_map<std::string, std::unique_ptr<EntityBP>> readConfig() {
 const std::unordered_map<std::string, std::unique_ptr<EntityBP>> blueprints = readConfig();
 
 
-std::deque<EntityBP*> readBuildOrder(const char *const fname) {
-    std::deque<EntityBP*> bps;
+std::deque<const EntityBP*> readBuildOrder(const char *const fname) {
+    std::deque<const EntityBP*> bps;
     std::fstream input(fname, std::ios::in);
     if (!input.is_open()) {
         std::cerr << "failed to open input file '" << fname << "'" << std::endl;
@@ -82,14 +105,8 @@ void resourceUpdate(State &state) {
 }
 
 void larvaeUpdate(State &state) {
-    static auto larvaeProducer = {
-        blueprints.at("hatchery").get(),
-        blueprints.at("lair").get(),
-        blueprints.at("hive").get(),
-    };
     for (auto res : state.getResources()) {
-        auto r = std::find(larvaeProducer.begin(), larvaeProducer.end(), res.second.getBlueprint());
-        if (r != larvaeProducer.end()) {
+        if (res.second.isMinerals()) {
             res.second.step(state);
         }
     }
@@ -145,11 +162,10 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     message["events"] = events;
     messages.push_back(message);
 }
-static nlohmann::json getInitialJSON(const std::string &race,
-        bool valid) {
+static nlohmann::json getInitialJSON(const Race race, bool valid) {
     nlohmann::json j;
     std::string game("sc2-hots-");
-    game.append(race);
+    game.append(raceToString(race));
     j["game"] = game;
     j["buildlistValid"] = valid ? 1 : 0;
     return j;
@@ -180,10 +196,10 @@ static bool checkAndRunAbilities(State &s) {
 }
 
 
-static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const std::string &race, const State &s) {
-    std::unordered_multiset<std::string> dependencies;
+static bool validateBuildOrder(const std::deque<const EntityBP*> &initialUnits, const Race race, const State &s) {
+    std::unordered_multiset<const EntityBP*> dependencies;
     s.iterEntities([&](const EntityInst &ent) {
-        dependencies.insert(ent.getBlueprint()->getName());
+        dependencies.insert(ent.getBlueprint());
     });
 
     int vespInst = 0, bases = 1;
@@ -215,14 +231,14 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
             return false;
         }
 
-        for(const std::string &req : bp->getMorphedFrom()) {
-            if( req == "larva" ) {
+        for(const EntityBP *req : bp->getMorphedFrom()) {
+            if( req->getName() == "larva" ) {
                 /* We have an endless amount of larvaes */
                 break;
             }
             auto position =  dependencies.find(req);
             if (position == dependencies.end()) {
-                std::cerr << "entity:" << bp->getName() << " cannot be upgraded, " << req << " does not exist yet." << std::endl;
+                std::cerr << "entity:" << bp->getName() << " cannot be upgraded, " << req->getName() << " does not exist yet." << std::endl;
                 return false;
             } else {
                 dependencies.erase(position);
@@ -239,7 +255,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
                 } else {
                     vespInst++;
                 }
-            } else if (building->startResources.getMinerals() && (building->getMorphedFrom().empty() || blueprints.at(building->getMorphedFrom().front())->is_unit)) {
+            } else if (building->startResources.getMinerals() && (building->getMorphedFrom().empty() || building->getMorphedFrom().front()->is_unit)) {
                 bases++;
             }
         }
@@ -247,13 +263,13 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
             neededSupply += static_cast<const UnitBP*>(bp)->getSupplyCost();
         }
         if (!bp->getMorphedFrom().empty()) {
-            auto morph = blueprints.at(bp->getMorphedFrom().front()).get();
+            auto morph = bp->getMorphedFrom().front();
             if (morph->is_unit) {
                 neededSupply -= static_cast<const UnitBP*>(morph)->getSupplyCost();
             }
         }
         currentSupply+=bp->getSupplyProvided();
-        dependencies.insert(bp->getName());
+        dependencies.insert(bp);
 
         if(neededSupply > currentSupply) {
             std::cerr << "not enough supplies to build new units, needed: " << neededSupply << " provided: " << currentSupply << std::endl;
@@ -263,7 +279,7 @@ static bool validateBuildOrder(const std::deque<EntityBP*> &initialUnits, const 
     return true;
 }
 
-static bool redistributeWorkers(State &s, BuildingBP *bpToBuild, std::deque<EntityBP*> buildQueue) {
+static bool redistributeWorkers(State &s, const BuildingBP *bpToBuild, std::deque<const EntityBP*> buildQueue) {
     bool buildingStarted = false;
 
     std::vector<WorkerInst *> idleWorkers;
@@ -280,7 +296,7 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild, std::deque<Enti
     }
 
     int need_gas = 0;
-    for (EntityBP* bp : buildQueue) {
+    for (const EntityBP* bp : buildQueue) {
         need_gas += bp->getCosts().getGas();
     }
 
@@ -354,13 +370,11 @@ static bool redistributeWorkers(State &s, BuildingBP *bpToBuild, std::deque<Enti
 
 static int simulation_all, simulation_fail;
 
-static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialUnits, std::string race, int timeout) {
+static std::pair<State, nlohmann::json> simulate(std::deque<const EntityBP*> buildOrder, const Race race, int timeout) {
     State curState(race, blueprints);
-    bool valid = !initialUnits.empty() && validateBuildOrder(initialUnits, race, curState);
+    bool valid = !buildOrder.empty() && validateBuildOrder(buildOrder, race, curState);
     simulation_all++;
     nlohmann::json j = getInitialJSON(race, valid);
-
-    std::deque<EntityBP*> buildOrder(initialUnits);
 
     j["initialUnits"] = curState.getUnitJSON();
 
@@ -374,7 +388,7 @@ static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialU
 
             // timestep 1
             resourceUpdate(curState);
-            if(race == "zerg"){
+            if(race == ZERG){
                 larvaeUpdate(curState);
             }
 
@@ -388,7 +402,7 @@ static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialU
             bool canBuild = !checkAndRunAbilities(curState);
 
             // timestep 3.5: maybe build something
-            BuildingBP *workerTask = nullptr;
+            const BuildingBP *workerTask = nullptr;
             bool buildStarted = false;
             if (canBuild && !buildOrder.empty()) {
                 auto buildNext = buildOrder.front();
@@ -401,18 +415,18 @@ static std::pair<State, nlohmann::json> simulate(std::deque<EntityBP*> &initialU
                         buildStarted = ent.startMorphing(buildNext, curState);
                     });
                 } else if(buildNext->is_unit) {
-                    auto unit = static_cast<UnitBP*>(buildNext);
+                    auto unit = static_cast<const UnitBP*>(buildNext);
                     // find a building where we can build the unit
                     curState.iterEntities([&](EntityInst &ent) {
                         if (buildStarted || ent.getBlueprint()->is_unit)
                             return;
-                        auto building = static_cast<BuildingInst*>(&ent);
-                        buildStarted = building->produceUnit(unit, curState);
+                        auto &building = static_cast<BuildingInst&>(ent);
+                        buildStarted = building.produceUnit(unit, curState);
                     });
                 } else {
                     // have redistributeWorkers() build the building
                     assert(!buildNext->is_unit && "no idea how to build this thing");
-                    workerTask = static_cast<BuildingBP*>(buildNext);
+                    workerTask = static_cast<const BuildingBP*>(buildNext);
                 }
             }
 
@@ -472,18 +486,18 @@ static struct fitness get_fitness(State &state, UnitBP* targetBP) {
 
 struct dependency_edge {
     size_t weight;
-    EntityBP *entity;
+    const EntityBP *entity;
 };
 
-static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDependencyGraph(UnitBP *targetBP, size_t count) {
-    std::unordered_map<EntityBP *, std::vector<dependency_edge>> dep_graph;
+static std::unordered_map<const EntityBP *, std::vector<dependency_edge>> generateDependencyGraph(const UnitBP *targetBP, size_t count) {
+    std::unordered_map<const EntityBP *, std::vector<dependency_edge>> dep_graph;
 
-    BuildingBP *gasBuilding;
-    BuildingBP *mainBuilding;
-    if (targetBP->getRace() == "zerg") {
+    const BuildingBP *gasBuilding;
+    const BuildingBP *mainBuilding;
+    if (targetBP->getRace() == ZERG) {
         gasBuilding = static_cast<BuildingBP*>(blueprints.at("extractor").get());
         mainBuilding = static_cast<BuildingBP*>(blueprints.at("hatchery").get());
-    } else if (targetBP->getRace() == "terran") {
+    } else if (targetBP->getRace() == TERRAN) {
         gasBuilding = static_cast<BuildingBP*>(blueprints.at("refinery").get());
         mainBuilding = static_cast<BuildingBP*>(blueprints.at("command_center").get());
     } else {
@@ -492,10 +506,9 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
     }
 
     std::deque<dependency_edge> worklist{{count, targetBP}};
-    std::unordered_set<EntityBP*> visited;
-    visited.insert(targetBP);
+    std::unordered_set<const EntityBP*> visited{targetBP};
 
-    auto insert_dep = [&] (EntityBP* parent, dependency_edge e, bool morph) {
+    auto insert_dep = [&] (const EntityBP* parent, dependency_edge e, bool morph) {
         if (e.entity == mainBuilding)
             return;
 
@@ -517,19 +530,18 @@ static std::unordered_map<EntityBP *, std::vector<dependency_edge>> generateDepe
 
         visited.insert(parent);
     };
-
     while (!worklist.empty()) {
         dependency_edge cur = worklist.front();
         if (!cur.entity->getRequireOneOf().empty()) {
-            auto front = blueprints.at(*cur.entity->getRequireOneOf().begin()).get();
+            auto front = cur.entity->getRequireOneOf().front();
             insert_dep(front, {0, cur.entity }, false);
         }
         if (!cur.entity->getProducedByOneOf().empty()) {
-            auto front = blueprints.at(*cur.entity->getProducedByOneOf().begin()).get();
+            auto front = cur.entity->getProducedByOneOf().front();
             insert_dep(front, { cur.weight, cur.entity }, false);
         }
         if (!cur.entity->getMorphedFrom().empty()) {
-            auto front = blueprints.at(*cur.entity->getMorphedFrom().begin()).get();
+            auto front = cur.entity->getMorphedFrom().front();
             insert_dep(front, { std::max(1lu,cur.weight), cur.entity }, true);
             //if (visited.find(front) == visited.end())
             if (cur.entity != mainBuilding)
@@ -572,8 +584,8 @@ static void dumpAdjGraph(std::pair<std::array<EntityBP*,1000>, std::array<bool,1
     std::cout << "}";
 }*/
 
-static void weightFixing(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
-    std::unordered_map<EntityBP *, std::pair<size_t, dependency_edge&>> incoming_edges;
+static void weightFixing(std::unordered_map<const EntityBP *, std::vector<dependency_edge>> &dep_graph) {
+    std::unordered_map<const EntityBP *, std::pair<size_t, dependency_edge&>> incoming_edges;
 
     for (auto &entr : dep_graph) {
         for (dependency_edge &dep : entr.second) {
@@ -581,11 +593,11 @@ static void weightFixing(std::unordered_map<EntityBP *, std::vector<dependency_e
             if( p != incoming_edges.end()){
                 std::pair<size_t,dependency_edge&> value(dep.weight+p->second.first, dep);
                 incoming_edges.erase(p);
-                std::pair<EntityBP *, std::pair<size_t, dependency_edge &>> elem = std::make_pair(dep.entity, value);
+                std::pair<const EntityBP *, std::pair<size_t, dependency_edge &>> elem = std::make_pair(dep.entity, value);
                 incoming_edges.insert(elem);
             } else {
                 std::pair<size_t,dependency_edge&> value(dep.weight, dep);
-                std::pair<EntityBP *, std::pair<size_t, dependency_edge &>> elem = std::make_pair(dep.entity, value);
+                std::pair<const EntityBP *, std::pair<size_t, dependency_edge &>> elem = std::make_pair(dep.entity, value);
                 incoming_edges.insert(elem);
             }
         }
@@ -600,25 +612,24 @@ static void weightFixing(std::unordered_map<EntityBP *, std::vector<dependency_e
     return;
 }
 
-static std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graphtransformation(std::unordered_map<EntityBP *, std::vector<dependency_edge>> &dep_graph) {
-    std::array<EntityBP*,1000> entities;
+static std::pair<std::array<const EntityBP*,1000>, std::array<bool,1000*1000>> graphtransformation(std::unordered_map<const EntityBP *, std::vector<dependency_edge>> &dep_graph) {
+    std::array<const EntityBP*,1000> entities;
     entities.fill(0);
     std::array<bool,1000*1000> adjacencies;
-    adjacencies.fill(0);
-    std::deque<size_t> worklist;
-    worklist.push_back(0);
+    adjacencies.fill(false);
+    std::deque<size_t> worklist{0};
     size_t nodeCount = 1;
-    std::string race = dep_graph.begin()->second.front().entity->getRace();
-    if(race == "zerg") {
+    assert(!dep_graph.empty());
+    Race race = dep_graph.begin()->first->getRace();
+    if(race == ZERG) {
         entities[0] = blueprints.at("hatchery").get();
-    }
-    if(race == "terran") {
+    } else if(race == TERRAN) {
         entities[0] = blueprints.at("command_center").get();
-    }
-    if(race == "protoss") {
+    } else if(race == PROTOSS) {
         entities[0] = blueprints.at("nexus").get();
     }
     while(!worklist.empty()) {
+        assert(nodeCount < 1000);
         auto cur = worklist.front();
         worklist.pop_front();
         auto edges = dep_graph.find(entities[cur]);
@@ -628,7 +639,7 @@ static std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graphtr
         for(auto &edge: edges->second){
             if(edge.weight > 0 && edge.weight != 0xbadf00d) {
                 auto &morphFroms = edge.entity->getMorphedFrom();
-                if(std::find(morphFroms.begin(), morphFroms.end(), entities[cur]->getName()) != morphFroms.end()){
+                if (!morphFroms.empty() && morphFroms[0] == entities[cur]) {
                     edge.weight = edge.weight == 1 ? 0xbadf00d : edge.weight - 1;
                     worklist.push_back(nodeCount);
                     entities[nodeCount] = edge.entity;
@@ -664,8 +675,8 @@ static std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graphtr
     return {entities, adjacencies};
 }
 // edges:  s*1000 + d
-static std::vector<EntityBP*> topSort(std::mt19937 &gen, std::pair<std::array<EntityBP*,1000>, std::array<bool,1000*1000>> graph) {
-    std::vector<EntityBP*> sort;
+static void topSort(std::deque<const EntityBP*> &sort, std::mt19937 &gen, std::pair<std::array<const EntityBP*,1000>, std::array<bool,1000*1000>> graph) {
+    sort.clear();
     std::vector<size_t> start_nodes{0};
     std::uniform_int_distribution<> dis_1k(0, 999);
 
@@ -677,7 +688,7 @@ static std::vector<EntityBP*> topSort(std::mt19937 &gen, std::pair<std::array<En
         sort.push_back(graph.first[node]);
         size_t edge_dest = 0;
         size_t rand_offset = dis_1k(gen);
-        for (size_t i = 0; i < 1000; i++) {
+        for (size_t i = 0; i < 1000; i++) { // TODO: this is not particularly random
             size_t idx = ((i + rand_offset) % 1000);
             if (graph.second[node*1000+idx]) {
                 edge_dest = idx;
@@ -695,24 +706,22 @@ static std::vector<EntityBP*> topSort(std::mt19937 &gen, std::pair<std::array<En
             }
         }
     }
-
-    return sort;
 }
-static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::vector<EntityBP*> buildlist, EntityBP *targetBP, int targetCount) {
-    UnitBP *worker;
-    EntityBP *abilityDependency;
-    EntityBP *abilityEntity;
-    EntityBP *supplyEntity;
-    BuildingBP *mainBuilding;
-    BuildingBP *gasBuilding;
-    if (targetBP->getRace() == "zerg") {
+static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::deque<const EntityBP*> &buildlist, EntityBP *targetBP, int targetCount) {
+    const UnitBP *worker;
+    const EntityBP *abilityDependency;
+    const EntityBP *abilityEntity;
+    const EntityBP *supplyEntity;
+    const BuildingBP *mainBuilding;
+    const BuildingBP *gasBuilding;
+    if (targetBP->getRace() == ZERG) {
         gasBuilding = static_cast<BuildingBP*>(blueprints.at("extractor").get());
         worker = static_cast<UnitBP*>(blueprints.at("drone").get());
         abilityDependency = blueprints.at("spawning_pool").get();
         abilityEntity = blueprints.at("queen").get();
         supplyEntity = blueprints.at("overlord").get();
         mainBuilding = static_cast<BuildingBP*>(blueprints.at("hatchery").get());
-    } else if (targetBP->getRace() == "terran") {
+    } else if (targetBP->getRace() == TERRAN) {
         gasBuilding = static_cast<BuildingBP*>(blueprints.at("refinery").get());
         worker = static_cast<UnitBP*>(blueprints.at("scv").get());
         abilityDependency = blueprints.at("barracks").get();
@@ -738,7 +747,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     size_t first_prod_idx = ~0;
     EntityBP *first_producer = nullptr;
     if (!targetBP->getProducedByOneOf().empty())
-        first_producer = blueprints.at(targetBP->getProducedByOneOf().front()).get();
+        first_producer = targetBP->getProducedByOneOf().front();
 
     for (size_t i = 0; i < buildlist.size(); i++) {
         if (buildlist[i] == abilityDependency && min_ability_idx == -1) {
@@ -754,7 +763,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
     }
     assert(first_prod_idx != ~ size_t { 0 } || first_producer == nullptr);
 
-    auto insert = [&] (ssize_t idx, EntityBP *what, bool insert_dependencies) {
+    auto insert = [&] (ssize_t idx, const EntityBP *what, bool insert_dependencies) {
         bool repeat = true;
         while (repeat) {
             repeat = false;
@@ -767,7 +776,7 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
 
             buildlist.insert(buildlist.begin() + idx, what);
             if (!what->getMorphedFrom().empty()) {
-                what = blueprints.at(what->getMorphedFrom().front()).get();
+                what = what->getMorphedFrom().front();
                 repeat = insert_dependencies;
             }
         }
@@ -828,8 +837,8 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         size_t i = 1;
         for (size_t pos : prod_indices) {
             size_t prod_idx = targetBP->getProducedByOneOf().size() > 1 ? (i % 2) : 0;
-            std::string producer = targetBP->getProducedByOneOf().at(prod_idx);
-            insert(pos + i, blueprints.at(producer).get(), false);
+            EntityBP *producer = targetBP->getProducedByOneOf().at(prod_idx);
+            insert(pos + i, producer, false);
             i++;
         }
     }
@@ -857,13 +866,13 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
         }
 
         if (buildlist[i]->is_unit) {
-            used_supply += static_cast<UnitBP*>(buildlist[i])->getSupplyCost();
+            used_supply += static_cast<const UnitBP*>(buildlist[i])->getSupplyCost();
             if (buildlist[i]->getName() == "zergling") {
-                used_supply += static_cast<UnitBP*>(buildlist[i])->getSupplyCost();
+                used_supply += static_cast<const UnitBP*>(buildlist[i])->getSupplyCost();
             }
         }
         if (!buildlist[i]->getMorphedFrom().empty()) {
-            EntityBP *morph = blueprints.at(buildlist[i]->getMorphedFrom().front()).get();
+            EntityBP *morph = buildlist[i]->getMorphedFrom().front();
             if (morph->is_unit) {
                 used_supply -= static_cast<UnitBP*>(morph)->getSupplyCost();
             }
@@ -885,13 +894,11 @@ static std::vector<EntityBP*> addUsefulStuffToBuildlist(std::mt19937 &gen, std::
             i--;
         }
     }
-
-    return buildlist;
 }
 
 static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int targetCount, std::string mode, int timeout, int timebarrier) {
     nlohmann::json bestList;
-    std::vector<EntityBP*> bestBuildList;
+    std::deque<const EntityBP*> bestBuildList, curList;
 
     int bestFitness = -1;
     int curCount = targetCount;
@@ -906,38 +913,46 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
         if(elapsed.count() >= timeout) {
             break;
         }
-        auto newList = addUsefulStuffToBuildlist(gen, topSort(gen, adj), targetBP, targetCount);
-        if (newList.empty())
+        std::mt19937 gen_copy = gen;
+        topSort(curList, gen, adj);
+        addUsefulStuffToBuildlist(gen, curList, targetBP, targetCount);
+        if (curList.empty())
             continue;
 
-        std::deque<EntityBP*> deqList(newList.begin(), newList.end());
-        auto buildlist_info = simulate(deqList, targetBP->getRace(), timebarrier);
+        auto buildlist_info = simulate(curList, targetBP->getRace(), timebarrier);
         int valid = buildlist_info.second["buildlistValid"];
         if(valid){
             int curFitness;
+            bool best = false;
             if(mode == "rush"){
                 curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
                 if(curFitness <= timebarrier){
                     bestList = buildlist_info.second;
+                    best = true;
 
+                    // try generating even more units
                     curCount++;
                     dep_graph = generateDependencyGraph(targetBP, curCount);
                     weightFixing(dep_graph);
                     adj = graphtransformation(dep_graph);
-                    bestBuildList = newList;
                 }
             } else {
                 curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
                 if(bestFitness == -1 || curFitness < bestFitness){
+                    best = true;
                     bestList = buildlist_info.second;
                     bestFitness = curFitness;
-                    bestBuildList = newList;
                 }
+            }
+
+            if (best) {
+                topSort(bestBuildList, gen_copy, adj);
+                addUsefulStuffToBuildlist(gen_copy, bestBuildList, targetBP, targetCount);
             }
         }
     }
     std::cerr << "Builded units: " << curCount-1 << std::endl;
-    for (EntityBP* bp : bestBuildList)
+    for (const EntityBP* bp : bestBuildList)
       std::cerr << bp->getName() << std::endl;
 
     return bestList;
@@ -948,7 +963,7 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
 
 int main(int argc, char *argv[]) {
     if (argc >= 4 && std::strcmp(argv[1], "forward") == 0) {
-        std::string race(argv[2]);
+        Race race = raceFromString(std::string{argv[2]});
         for (int i = 3; i < argc; i++) {
             auto initialUnits = readBuildOrder(argv[i]);
             if(initialUnits.empty()) {

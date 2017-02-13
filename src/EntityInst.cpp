@@ -13,7 +13,7 @@ bool EntityInst::isBusy() const {
     return morphing;
 }
 
-bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s, const UnitBP *morphedFrom) {
+bool EntityInst::checkBuildRequirements(const EntityBP *entity, State &s, const UnitBP *morphedFrom) {
     // check free slots
     if(isBusy()) {
         return false;
@@ -26,7 +26,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s, const UnitBP
     // check if this building can produce the unit. Therefore get list of buildings which
     // can produce the entity and check if this building is one of them
     const auto &buildingNames = entity->getProducedByOneOf();
-    if (!buildingNames.empty() && std::find(buildingNames.begin(), buildingNames.end(), getBlueprint()->getName()) == buildingNames.end()) {
+    if (!buildingNames.empty() && std::find(buildingNames.begin(), buildingNames.end(), getBlueprint()) == buildingNames.end()) {
         // this building can not produce the unit
         return false;
     }
@@ -39,7 +39,7 @@ bool EntityInst::checkBuildRequirements(EntityBP *entity, State &s, const UnitBP
     // check supply
     if (entity->is_unit) {
         int supplyUsed = s.computeUsedSupply();
-        supplyUsed += static_cast<UnitBP *>(entity)->getSupplyCost();
+        supplyUsed += static_cast<const UnitBP *>(entity)->getSupplyCost();
         if (morphedFrom != nullptr) {
             supplyUsed -= morphedFrom->getSupplyCost();
         }
@@ -53,7 +53,7 @@ bool EntityInst::isMorphing() const {
     return morphing;
 }
 
-bool EntityInst::startMorphing(EntityBP *entity, State &s) {
+bool EntityInst::startMorphing(const EntityBP *entity, State &s) {
     const EntityBP *bp = getBlueprint();
     if (!checkBuildRequirements(entity, s, bp->is_unit ? static_cast<const UnitBP*>(getBlueprint()) : nullptr) || !canMorph())
     {
@@ -61,12 +61,17 @@ bool EntityInst::startMorphing(EntityBP *entity, State &s) {
     }
     bool foundBp = false;
     for (auto morph : entity->getMorphedFrom()) {
-        if (blueprint->getName() == morph)
+        if (blueprint == morph) {
             foundBp = true;
+            break;
+        }
     }
     if (!foundBp){
         return false;
     }
+
+    assert(canMorph());
+
     if (bp->is_worker) {
         static_cast<WorkerInst *>(this)->stopMining(s);
     }
@@ -107,14 +112,13 @@ bool BuildingInst::canMorph() const {
     return freeBuildSlots == static_cast<const BuildingBP*>(getBlueprint())->getBuildSlots() && EntityInst::canMorph();
 }
 
-/** This method starts the mechanism of producing an unit in the building. Therefore
- *  zergs are not covered yet.
+/** This method starts the mechanism of producing an unit in the building.
  *
- *  @return: Returns either a @BuildEntityAction or
- *  a @nullptr when any requirment is not fulfilled
+ *  @return: Returns true when a @BuildEntityAction was scheduled, or
+ *  false when any requirement was not fulfilled.
  *
- *  **/
-bool BuildingInst::produceUnit(UnitBP *entity, State &s) {
+ **/
+bool BuildingInst::produceUnit(const UnitBP *entity, State &s) {
     if (!checkBuildRequirements(entity, s, nullptr) || !entity->getMorphedFrom().empty()) {
         return false;
     }
@@ -283,17 +287,17 @@ void WorkerInst::assignToResource(ResourceInst& r, State &s){
     workingResource = r.getID();
     r.addWorker();
 }
-bool WorkerInst::startBuilding(BuildingBP *bbp, State &s) {
+bool WorkerInst::startBuilding(const BuildingBP *bbp, State &s) {
     if (isMorphing()) {
         return false;
     }
-    if(getBlueprint()->getName() != "probe") {
+    if(getBlueprint()->getRace() != PROTOSS) {
         stopMining(s);
     }
     if (!checkBuildRequirements(bbp, s, nullptr) || !bbp->getMorphedFrom().empty()) {
         return false;
     }
-    if(getBlueprint()->getName() != "probe") {
+    if(!getBlueprint()->is_worker || getBlueprint()->getRace() != PROTOSS) {
         isBuilding = true;
     }
     s.buildActions.push_back(BuildEntityAction(bbp, getID(), -1, s));

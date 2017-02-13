@@ -4,24 +4,52 @@
 #include "Resources.h"
 #include <string>
 #include <vector>
+#include <cassert>
+#include <unordered_map>
+#include <memory>
 
 class Ability;
 class EntityInst;
 class State;
 
+enum Race {
+    ZERG,
+    PROTOSS,
+    TERRAN,
+};
+inline enum Race raceFromString(const std::string &str) {
+    if (str == "zerg")
+        return ZERG;
+    else if (str == "protoss")
+        return PROTOSS;
+    assert(str == "terran");
+    return TERRAN;
+}
+inline std::string raceToString(const Race race) {
+    switch(race) {
+        case ZERG:
+            return "zerg";
+        case PROTOSS:
+            return "protoss";
+        case TERRAN:
+            return "terran";
+    }
+    assert(false && "invalid race");
+}
+
 class EntityBP {
     protected:
         const std::string name;
-        const std::string race;
+        const Race race;
 
         const int startEnergy;
         const int maxEnergy;
         const Resources costs;
         const int buildTime;
         const std::vector<Ability*> abilities;
-        const std::vector<std::string> requireOneOf; // we need one of the listed entities
-        const std::vector<std::string> producedByOneOf; // second required entity
-        const std::vector<std::string> morphedFrom; // third required entity. This entity is gone once this was built.
+        std::vector<EntityBP*> requireOneOf; // we need one of the listed entities
+        std::vector<EntityBP*> producedByOneOf; // second required entity
+        std::vector<EntityBP*> morphedFrom; // third required entity. This entity is gone once this was built.
         const int supplyProvided;
 
         explicit EntityBP(std::string data[15], bool, bool);
@@ -30,15 +58,18 @@ class EntityBP {
         const bool is_worker;
 
         const std::string & getName() const;
-        const std::string & getRace() const;
+        Race getRace() const;
         int getStartEnergy() const;
         int getMaxEnergy() const;
         Resources getCosts() const;
         int getBuildTime() const;
         const std::vector<Ability*>& getAbilities() const;
-        const std::vector<std::string>& getRequireOneOf() const;
-        const std::vector<std::string>& getProducedByOneOf() const;
-        const std::vector<std::string>& getMorphedFrom() const;
+        std::vector<EntityBP*>& getRequireOneOf();
+        std::vector<EntityBP*>& getProducedByOneOf();
+        std::vector<EntityBP*>& getMorphedFrom();
+        const std::vector<EntityBP*>& getRequireOneOf() const;
+        const std::vector<EntityBP*>& getProducedByOneOf() const;
+        const std::vector<EntityBP*>& getMorphedFrom() const;
         int getSupplyProvided() const;
         virtual int newInstance(State&) const = 0;
         virtual ~EntityBP() = default;

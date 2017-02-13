@@ -16,12 +16,12 @@ class EntityInst {
         int id;
         static int next_id;
     protected:
-        bool checkBuildRequirements(EntityBP*, State&, const UnitBP *);
+        bool checkBuildRequirements(const EntityBP*, State&, const UnitBP *);
         ~EntityInst() = default;
     public:
         virtual bool isBusy() const;
         bool isMorphing() const;
-        bool startMorphing(EntityBP *, State &s);
+        bool startMorphing(const EntityBP *, State &s);
         explicit EntityInst(const EntityBP *bp);
         const EntityBP *getBlueprint() const;
         int getID() const;
@@ -43,7 +43,7 @@ class BuildingInst : public EntityInst {
     public:
         explicit BuildingInst(const BuildingBP *building);
         bool isBusy() const override;
-        bool produceUnit(UnitBP *entity, State &s);
+        bool produceUnit(const UnitBP *entity, State &s);
         void incFreeBuildSlots();
         bool canMorph() const override;
         int  getBuildTime() const;
@@ -104,7 +104,7 @@ class WorkerInst : public UnitInst {
         explicit WorkerInst(const UnitBP *unit);
         void assignToResource(ResourceInst& r, State&);
         void stopMining(State &s);
-        bool startBuilding(BuildingBP *bbp, State&);
+        bool startBuilding(const BuildingBP *bbp, State&);
         void stopBuilding();
         bool isBusy() const override;
         bool isMiningMinerals(State&) const;

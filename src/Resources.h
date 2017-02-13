@@ -29,4 +29,6 @@ class Resources{
         Resources operator-() const;
         Resources operator*(int factor) const;
         bool allValuesLargerEquals(Resources other) const;
+
+        inline bool notZero() const { return milliGas > 0 || milliMinerals > 0; };
 };

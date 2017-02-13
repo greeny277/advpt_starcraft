@@ -71,7 +71,7 @@ void InjectAction::finish(State &s){
 }
 
 
-BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
+BuildEntityAction::BuildEntityAction(const EntityBP *blueprint_ , int worker_,
         int producedBy_, State &s) :
     Action(s.time, blueprint_->getBuildTime()),
     blueprint(blueprint_),
@@ -82,7 +82,7 @@ BuildEntityAction::BuildEntityAction(EntityBP *blueprint_ , int worker_,
 
     // change state
     s.resources -= blueprint->getCosts();
-    if(blueprint->getName() == "zergling"){
+    if(blueprint->getRace() == ZERG && blueprint->getName() == "zergling"){
         s.adjustSupply(blueprint, true);
     }
     s.adjustSupply(blueprint, true);
@@ -136,25 +136,27 @@ void BuildEntityAction::finish(State &s) {
     bool morphed = producer != nullptr && producer->isMorphing();
 
     int id = blueprint->newInstance(s);
-    int id_new;
-    if(blueprint->getName() == "zergling"){
+    int id_new = -1;
+    if(blueprint->getRace() == ZERG && blueprint->getName() == "zergling"){
         id_new = blueprint->newInstance(s);
     }
 
     // stop worker to build
     if(worker != -1){
-        if(blueprint->getRace() != "protoss") {
+        if(blueprint->getRace() != PROTOSS) {
             s.getWorkers().at(worker).stopBuilding();
         }
     }
     if(producedBy != -1){
         if (producer->isMorphing()) {
-            if(auto resource = dynamic_cast<ResourceInst*>(producer)) {
+            assert(!blueprint->getMorphedFrom().empty() && blueprint->getMorphedFrom().front() == producer->getBlueprint());
+            if (!producer->getBlueprint()->is_unit && static_cast<const BuildingBP*>(producer->getBlueprint())->startResources.notZero()) {
+                auto resource = static_cast<ResourceInst*>(producer);
                 s.getResources().at(id).copyRemainingResources(*resource);
             }
             s.eraseEntity(producedBy);
-        } else if (auto building = dynamic_cast<BuildingInst*>(producer)) {
-            building->incFreeBuildSlots();
+        } else if (!producer->getBlueprint()->is_unit) {
+            static_cast<BuildingInst*>(producer)->incFreeBuildSlots();
         }
     }
 
@@ -163,7 +165,7 @@ void BuildEntityAction::finish(State &s) {
         id = producedBy;
     }
     produced.push_back(id); // remember ID for JSON output
-    if(blueprint->getName() == "zergling"){
+    if(id_new != -1){
         produced.push_back(id_new); // remember ID for JSON output
         s.adjustSupply(blueprint, false);
     }

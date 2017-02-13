@@ -1,5 +1,6 @@
 #pragma once
 #include <unordered_set>
 #include <vector>
+#include "EntityBP.h"
 
-bool buildOrderCheckOneOf(const std::vector<std::string> &oneOf, const std::unordered_multiset<std::string> &dependencies);
+bool buildOrderCheckOneOf(const std::vector<EntityBP*> &oneOf, const std::unordered_multiset<const EntityBP*> &dependencies);

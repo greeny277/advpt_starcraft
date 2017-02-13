@@ -2,7 +2,7 @@
 //
 #include "State.h"
 
-State::State(const std::string &race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints_) :
+State::State(const Race race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints_) :
     workerMap{},
     buildingMap{},
     unitMap{},
@@ -21,13 +21,13 @@ State::State(const std::string &race, const std::unordered_map<std::string, std:
         const char *workerName = nullptr;
         int mainBuildingID;
 
-        if(race == "protoss") {
+        if(race == PROTOSS) {
             workerName = "probe";
             mainBuildingID = blueprints.at("nexus").get()->newInstance(*this);
-        } else if(race == "terran") {
+        } else if(race == TERRAN) {
             workerName = "scv";
             mainBuildingID = blueprints.at("command_center")->newInstance(*this);
-        } else if (race == "zerg") {
+        } else if (race == ZERG) {
             workerName = "drone";
             mainBuildingID = blueprints.at("hatchery").get()->newInstance(*this);
             EntityBP *overlord = blueprints.at("overlord").get();
@@ -84,23 +84,23 @@ const std::unordered_map<int,ResourceInst>& State::getResources() const {
 }
 
 void State::addBuildingInst(BuildingInst e) {
-    alreadyProduced.insert(e.getBlueprint()->getName());
+    alreadyProduced.insert(e.getBlueprint());
     buildingMap.insert({e.getID(),e});
 }
 void State::addWorkerInst(WorkerInst e) {
-    alreadyProduced.insert(e.getBlueprint()->getName());
+    alreadyProduced.insert(e.getBlueprint());
     workerMap.insert({e.getID(),e});
 }
 void State::addUnitInst(UnitInst e) {
-    alreadyProduced.insert(e.getBlueprint()->getName());
+    alreadyProduced.insert(e.getBlueprint());
     unitMap.insert({e.getID(),e});
 }
 void State::addResourceInst(ResourceInst e) {
-    alreadyProduced.insert(e.getBlueprint()->getName());
+    alreadyProduced.insert(e.getBlueprint());
     resourceMap.insert({e.getID(), e});
 }
 void State::eraseEntity(int id) {
-    alreadyProduced.erase(alreadyProduced.find(getEntity(id)->getBlueprint()->getName()));
+    alreadyProduced.erase(alreadyProduced.find(getEntity(id)->getBlueprint()));
     buildingMap.erase(id);
     workerMap.erase(id);
     unitMap.erase(id);
@@ -124,9 +124,9 @@ EntityInst *State::getEntity(int id) {
 void State::adjustSupply(const EntityBP *entity, bool starting) {
     if (starting) {
         if (!entity->getMorphedFrom().empty()) {
-            auto &front = blueprints.at(entity->getMorphedFrom().front());
+            auto front = entity->getMorphedFrom().front();
             if (front->is_unit) {
-                usedSupply -= static_cast<const UnitBP*>(front.get())->getSupplyCost();
+                usedSupply -= static_cast<const UnitBP*>(front)->getSupplyCost();
             }
         }
         if (entity->is_unit) {
@@ -137,7 +137,7 @@ void State::adjustSupply(const EntityBP *entity, bool starting) {
         maxSupply += entity->getSupplyProvided();
 
         if (!entity->getMorphedFrom().empty()) {
-            auto &front = blueprints.at(entity->getMorphedFrom().front());
+            auto front = entity->getMorphedFrom().front();
             maxSupply -= front->getSupplyProvided();
         }
     }

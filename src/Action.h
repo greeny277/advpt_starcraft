@@ -62,19 +62,19 @@ class InjectAction : public AbilityAction {
 
 class BuildEntityAction : public Action {
     private:
-        EntityBP* blueprint;
+        const EntityBP* blueprint;
         int worker;
         std::vector<int> produced;
         int producedBy;
         bool wasFinished;
 
     public:
-        BuildEntityAction(EntityBP *blueprint_ , int worker_, int producedBy, State &s);
+        BuildEntityAction(const EntityBP *blueprint_ , int worker_, int producedBy, State &s);
         nlohmann::json printStartJSON() override;
         void printEndJSON(nlohmann::json&) override;
         void finish(State &s) override;
         inline bool hasFinished() const { return wasFinished; }
         void tick(State &s) override;
-        inline EntityBP *getBlueprint() const { return blueprint; }
+        inline const EntityBP *getBlueprint() const { return blueprint; }
 };
 
