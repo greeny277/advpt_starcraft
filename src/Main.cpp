@@ -441,7 +441,7 @@ static std::pair<State, nlohmann::json> simulate(std::deque<const EntityBP*> bui
             stillBuilding = !curState.buildActions.empty();
         }
 
-        if (!buildOrder.empty()) {
+        if (!buildOrder.empty() || !curState.buildActions.empty()) {
             //std::cerr << "Build order could not be finished." << std::endl;
             valid = false;
             j["buildlistValid"] = 0;
@@ -922,6 +922,7 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
     auto dep_graph = generateDependencyGraph(targetBP, curCount);
     weightFixing(dep_graph);
     auto adj = graphtransformation(dep_graph);
+    bool rush_mode = mode == "rush";
 
     auto start = std::chrono::system_clock::now();
     while(1){
@@ -930,7 +931,7 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
         if(elapsed.count() >= timeout) {
             break;
         }
-        std::mt19937 gen_copy = gen;
+        std::mt19937 gen_copy(gen);
         topSort(curList, gen, adj);
         addUsefulStuffToBuildlist(gen, curList, targetBP, targetCount);
         if (curList.empty())
@@ -939,32 +940,27 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
         auto buildlist_info = simulate(curList, targetBP->getRace(), timebarrier);
         int valid = buildlist_info.second["buildlistValid"];
         if(valid){
-            int curFitness;
+            int curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
             bool best = false;
-            if(mode == "rush"){
-                curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
-                if(curFitness <= timebarrier){
-                    bestList = buildlist_info.second;
-                    best = true;
+            if(rush_mode && curFitness <= timebarrier){
+                best = true;
+            } else if(!rush_mode && (bestFitness == -1 || curFitness < bestFitness)) {
+                best = true;
+                bestFitness = curFitness;
+            }
 
+            if (best) {
+                topSort(bestBuildList, gen_copy, adj);
+                addUsefulStuffToBuildlist(gen_copy, bestBuildList, targetBP, targetCount);
+                bestList = buildlist_info.second;
+
+                if (rush_mode) {
                     // try generating even more units
                     curCount++;
                     dep_graph = generateDependencyGraph(targetBP, curCount);
                     weightFixing(dep_graph);
                     adj = graphtransformation(dep_graph);
                 }
-            } else {
-                curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
-                if(bestFitness == -1 || curFitness < bestFitness){
-                    best = true;
-                    bestList = buildlist_info.second;
-                    bestFitness = curFitness;
-                }
-            }
-
-            if (best) {
-                topSort(bestBuildList, gen_copy, adj);
-                addUsefulStuffToBuildlist(gen_copy, bestBuildList, targetBP, targetCount);
             }
         }
     }
