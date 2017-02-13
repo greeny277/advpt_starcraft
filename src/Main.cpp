@@ -113,14 +113,15 @@ void larvaeUpdate(State &state) {
 }
 
 template<typename T>
-static void actionsToJSON(std::vector<T>& actions, nlohmann::json& events, int timestamp) {
+static void actionsToJSON(std::vector<T>& actions, nlohmann::json* events, int timestamp) {
     for(auto action = actions.begin(); action != actions.end(); ){
         if (action->isReady()) {
-            action->printEndJSON(events);
+            if (events)
+                action->printEndJSON(*events);
             std::swap(*action, actions.back());
             actions.pop_back();
-        } else if (action->getStartPoint() == timestamp) {
-            events.push_back(action->printStartJSON());
+        } else if (action->getStartPoint() == timestamp && events) {
+            events->push_back(action->printStartJSON());
             action++;
         } else {
             action++;
@@ -129,13 +130,13 @@ static void actionsToJSON(std::vector<T>& actions, nlohmann::json& events, int t
 
 }
 
-static void printJSON(State &curState, nlohmann::json &messages) {
+static void printJSON(State &curState, nlohmann::json *messages) {
     static int lastMineralWorkers, lastGasWorkers;
     auto events = nlohmann::json::array();
-    actionsToJSON(curState.buildActions, events, curState.time);
-    actionsToJSON(curState.muleActions, events, curState.time);
-    actionsToJSON(curState.injectActions, events, curState.time);
-    actionsToJSON(curState.chronoActions, events, curState.time);
+    actionsToJSON(curState.buildActions, messages ? &events : nullptr, curState.time);
+    actionsToJSON(curState.muleActions, messages ? &events : nullptr, curState.time);
+    actionsToJSON(curState.injectActions, messages ? &events : nullptr, curState.time);
+    actionsToJSON(curState.chronoActions, messages ? &events : nullptr, curState.time);
     int mineralWorkers = 0;
     int gasWorkers = 0;
     for (auto &res : curState.getResources()) {
@@ -144,7 +145,7 @@ static void printJSON(State &curState, nlohmann::json &messages) {
         if (res.second.isGas())
             gasWorkers += res.second.getActiveWorkerCount();
     }
-    if (events.size() == 0 && mineralWorkers == lastMineralWorkers && gasWorkers == lastGasWorkers) {
+    if (!messages || (events.size() == 0 && mineralWorkers == lastMineralWorkers && gasWorkers == lastGasWorkers)) {
         return;
     }
     lastMineralWorkers = mineralWorkers;
@@ -160,7 +161,7 @@ static void printJSON(State &curState, nlohmann::json &messages) {
     message["status"]["workers"]["minerals"] = mineralWorkers;
     message["status"]["workers"]["vespene"] = gasWorkers;
     message["events"] = events;
-    messages.push_back(message);
+    messages->push_back(message);
 }
 static nlohmann::json getInitialJSON(const Race race, bool valid) {
     nlohmann::json j;
@@ -370,16 +371,18 @@ static bool redistributeWorkers(State &s, const BuildingBP *bpToBuild, std::dequ
 
 static int simulation_all, simulation_fail;
 
-static std::pair<State, nlohmann::json> simulate(std::deque<const EntityBP*> buildOrder, const Race race, int timeout) {
+static std::pair<State, bool> simulate(std::deque<const EntityBP*> buildOrder, const Race race, int timeout, nlohmann::json *j) {
     State curState(race, blueprints);
     bool valid = !buildOrder.empty() && validateBuildOrder(buildOrder, race, curState);
     simulation_all++;
-    nlohmann::json j = getInitialJSON(race, valid);
+    if (j) {
+        *j = getInitialJSON(race, valid);
+        (*j)["initialUnits"] = curState.getUnitJSON();
+    }
 
-    j["initialUnits"] = curState.getUnitJSON();
 
     if (valid) {
-        auto messages = nlohmann::json::array();
+        nlohmann::json messages = nlohmann::json::array();
 
         bool stillBuilding = false;
         while (curState.time < timeout && (stillBuilding || !buildOrder.empty())) {
@@ -436,27 +439,23 @@ static std::pair<State, nlohmann::json> simulate(std::deque<const EntityBP*> bui
                 buildOrder.pop_front();
 
             // timestep 5
-            printJSON(curState, messages);
+            printJSON(curState, j ? &messages : nullptr);
 
             stillBuilding = !curState.buildActions.empty();
         }
 
         if (!buildOrder.empty() || !curState.buildActions.empty()) {
-            //std::cerr << "Build order could not be finished." << std::endl;
             valid = false;
-            j["buildlistValid"] = 0;
-            valid = false;
-            /*for (EntityBP* bp : initialUnits) {
-                std::cerr << bp->getName() << std::endl;
-            }*/ // TODO
+            if (j) {
+                (*j)["buildlistValid"] = 0;
+            }
             simulation_fail++;
-        } else {
-            j["messages"] = messages;
+        } else if (j) {
+            (*j)["messages"] = messages;
         }
     }
 
-    //std::cout << j.dump(4) << std::endl;
-    return make_pair(curState, j);
+    return std::make_pair(curState, valid);
 }
 
 [[noreturn]] static void usage(char *argv[]) {
@@ -914,7 +913,6 @@ static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::deque<const Entity
 }
 
 static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int targetCount, std::string mode, int timeout, int timebarrier) {
-    nlohmann::json bestList;
     std::deque<const EntityBP*> bestBuildList, curList;
 
     int bestFitness = -1;
@@ -937,9 +935,8 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
         if (curList.empty())
             continue;
 
-        auto buildlist_info = simulate(curList, targetBP->getRace(), timebarrier);
-        int valid = buildlist_info.second["buildlistValid"];
-        if(valid){
+        auto buildlist_info = simulate(curList, targetBP->getRace(), timebarrier, nullptr);
+        if(buildlist_info.second){
             int curFitness = get_fitness(buildlist_info.first, targetBP).timeProceeded;
             bool best = false;
             if(rush_mode && curFitness <= timebarrier){
@@ -952,7 +949,6 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
             if (best) {
                 topSort(bestBuildList, gen_copy, adj);
                 addUsefulStuffToBuildlist(gen_copy, bestBuildList, targetBP, targetCount);
-                bestList = buildlist_info.second;
 
                 if (rush_mode) {
                     // try generating even more units
@@ -961,12 +957,17 @@ static nlohmann::json optimizerLoop(std::mt19937 &gen, UnitBP *targetBP, int tar
                     weightFixing(dep_graph);
                     adj = graphtransformation(dep_graph);
                 }
+
             }
         }
     }
     std::cerr << "Builded units: " << curCount-1 << std::endl;
     for (const EntityBP* bp : bestBuildList)
       std::cerr << bp->getName() << std::endl;
+
+    nlohmann::json bestList;
+    auto r = simulate(bestBuildList, targetBP->getRace(), timebarrier, &bestList);
+    assert(r.second);
 
     return bestList;
 }
@@ -982,7 +983,8 @@ int main(int argc, char *argv[]) {
             if(initialUnits.empty()) {
                 std::cerr << "Invalid build order?" << std::endl;
             }
-            auto j = simulate(initialUnits, race, 1000).second;
+            nlohmann::json j;
+            simulate(initialUnits, race, 1000, &j);
             std::cout << j.dump(4) << std::endl;
         }
     } else if (argc == 4 && std::strcmp(argv[1], "rush") == 0) {
