@@ -131,6 +131,11 @@ void BuildEntityAction::tick(State &s) {
 void BuildEntityAction::finish(State &s) {
     assert(!wasFinished);
     wasFinished = true;
+    if(blueprint == s.gasBuilding)
+        s.gasBuildingCount++;
+
+    if(blueprint == s.mainBuilding)
+        s.mainBuildingCount++;
 
     EntityInst *producer = producedBy == -1 ? nullptr : s.getEntity(producedBy);
     bool morphed = producer != nullptr && producer->isMorphing();

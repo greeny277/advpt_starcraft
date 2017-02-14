@@ -16,7 +16,9 @@ State::State(const Race race, const std::unordered_map<std::string, std::unique_
     blueprints(blueprints_),
     alreadyProduced{},
     usedSupply(0),
-    maxSupply(0) {
+    maxSupply(0),
+    mainBuildingCount(1),
+    gasBuildingCount(0) {
 
         const char *workerName = nullptr;
         int mainBuildingID;
@@ -24,24 +26,30 @@ State::State(const Race race, const std::unordered_map<std::string, std::unique_
         if(race == PROTOSS) {
             workerName = "probe";
             mainBuildingID = blueprints.at("nexus").get()->newInstance(*this);
+            mainBuilding = blueprints.at("nexus").get();
+            gasBuilding = blueprints.at("assimilator").get();
         } else if(race == TERRAN) {
             workerName = "scv";
             mainBuildingID = blueprints.at("command_center")->newInstance(*this);
+            mainBuilding = blueprints.at("command_center").get();
+            gasBuilding = blueprints.at("refinery").get();
         } else if (race == ZERG) {
             workerName = "drone";
             mainBuildingID = blueprints.at("hatchery").get()->newInstance(*this);
             EntityBP *overlord = blueprints.at("overlord").get();
             overlord->newInstance(*this);
             adjustSupply(overlord, false);
+            mainBuilding = blueprints.at("hatchery").get();
+            gasBuilding = blueprints.at("extractor").get();
         } else {
             assert(false);
         }
-        ResourceInst &mainBuilding = getResources().at(mainBuildingID);
-        adjustSupply(mainBuilding.getBlueprint(), false);
+        ResourceInst &mainBuildingRes = getResources().at(mainBuildingID);
+        adjustSupply(mainBuildingRes.getBlueprint(), false);
         const UnitBP *worker = static_cast<const UnitBP*>(blueprints.at(workerName).get());
         for (size_t i = 0; i < 6; i++) {
             int workerID = worker->newInstance(*this);
-            getWorkers().at(workerID).assignToResource(mainBuilding, *this);
+            getWorkers().at(workerID).assignToResource(mainBuildingRes, *this);
             adjustSupply(worker, true);
         }
 }

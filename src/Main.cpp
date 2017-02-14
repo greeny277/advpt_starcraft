@@ -380,7 +380,6 @@ static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, 
         (*j)["initialUnits"] = curState.getUnitJSON();
     }
 
-
     if (valid) {
         nlohmann::json messages = nlohmann::json::array();
 
@@ -411,12 +410,15 @@ static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, 
                 auto buildNext = buildOrder.front();
                 if (buildNext->getMorphedFrom().size()) {
                     // find a non-busy entity to upgrade/morph
-                    curState.iterEntities([&](EntityInst &ent) {
-                        if (buildStarted)
-                            return;
+                    if(buildNext != curState.gasBuilding ||
+                            curState.mainBuildingCount*2 >= curState.gasBuildingCount+1){
+                        curState.iterEntities([&](EntityInst &ent) {
+                            if (buildStarted)
+                                return;
 
-                        buildStarted = ent.startMorphing(buildNext, curState);
-                    });
+                            buildStarted = ent.startMorphing(buildNext, curState);
+                        });
+                    }
                 } else if(buildNext->is_unit) {
                     auto unit = static_cast<const UnitBP*>(buildNext);
                     // find a building where we can build the unit
@@ -434,9 +436,13 @@ static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, 
             }
 
             // timestep 4
-            buildStarted |= redistributeWorkers(curState, workerTask, buildOrder);
-            if (buildStarted)
-                buildOrder.pop_front();
+            if(workerTask != curState.gasBuilding ||
+               curState.mainBuildingCount*2 >= curState.gasBuildingCount+1)
+            {
+                buildStarted |= redistributeWorkers(curState, workerTask, buildOrder);
+                if (buildStarted)
+                    buildOrder.pop_front();
+            }
 
             // timestep 5
             printJSON(curState, j ? &messages : nullptr);
