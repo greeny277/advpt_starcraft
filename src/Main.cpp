@@ -862,6 +862,7 @@ static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::deque<const Entity
         if(!want_gas && buildlist[i]->getCosts().getGas() > 0){
             insert(std::max(ssize_t { 0l }, i - supply_dis(gen)), gasBuilding, true);
             want_gas = true;
+            i++;
         }
 
         if (buildlist[i]->is_unit) {
@@ -881,6 +882,7 @@ static void addUsefulStuffToBuildlist(std::mt19937 &gen, std::deque<const Entity
         if(max_supply < used_supply) {
             insert(std::max(ssize_t { 0 }, i - supply_dis(gen)), supplyEntity, true);
             max_supply += supplyEntity->getSupplyProvided();
+            i++;
         }
     }
     if (used_supply > 2000)
