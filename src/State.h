@@ -31,10 +31,7 @@ public:
     int usedSupply;
     int maxSupply;
     EntityBP *mainBuilding;
-    int mainBuildingCount;
-
     EntityBP *gasBuilding;
-    int gasBuildingCount;
 
 public:
     State(const Race race, const std::unordered_map<std::string, std::unique_ptr<EntityBP>> &blueprints);

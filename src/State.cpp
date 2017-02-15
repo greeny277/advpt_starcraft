@@ -16,9 +16,7 @@ State::State(const Race race, const std::unordered_map<std::string, std::unique_
     blueprints(blueprints_),
     alreadyProduced{},
     usedSupply(0),
-    maxSupply(0),
-    mainBuildingCount(1),
-    gasBuildingCount(0) {
+    maxSupply(0) {
 
         const char *workerName = nullptr;
         int mainBuildingID;

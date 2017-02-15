@@ -383,10 +383,20 @@ static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, 
     if (valid) {
         nlohmann::json messages = nlohmann::json::array();
 
+        std::queue<int> mainBuildingFinished;
+        mainBuildingFinished.push(0);
+        mainBuildingFinished.push(0);
         bool stillBuilding = false;
+        int gasWaitTime = -1000;
         while (curState.time < timeout && (stillBuilding || !buildOrder.empty())) {
             // increment time attribute
             curState.time++;
+
+            // figure out if gasbuilding needs a delay
+            if(buildOrder.front() == curState.gasBuilding && gasWaitTime == -1000){
+                gasWaitTime = mainBuildingFinished.back()-curState.gasBuilding->getBuildTime();
+                mainBuildingFinished.pop();
+            }
 
             // timestep 1
             resourceUpdate(curState);
@@ -408,17 +418,16 @@ static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, 
             bool buildStarted = false;
             if (canBuild && !buildOrder.empty()) {
                 auto buildNext = buildOrder.front();
-                if (buildNext->getMorphedFrom().size()) {
+                if(buildOrder.front() == curState.gasBuilding && gasWaitTime > curState.time){
+                    buildStarted = false;
+                } else if (buildNext->getMorphedFrom().size()) {
                     // find a non-busy entity to upgrade/morph
-                    if(buildNext != curState.gasBuilding ||
-                            curState.mainBuildingCount*2 >= curState.gasBuildingCount+1){
-                        curState.iterEntities([&](EntityInst &ent) {
-                            if (buildStarted)
-                                return;
+                    curState.iterEntities([&](EntityInst &ent) {
+                        if (buildStarted)
+                            return;
 
-                            buildStarted = ent.startMorphing(buildNext, curState);
-                        });
-                    }
+                        buildStarted = ent.startMorphing(buildNext, curState);
+                    });
                 } else if(buildNext->is_unit) {
                     auto unit = static_cast<const UnitBP*>(buildNext);
                     // find a building where we can build the unit
@@ -436,12 +445,16 @@ static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, 
             }
 
             // timestep 4
-            if(workerTask != curState.gasBuilding ||
-               curState.mainBuildingCount*2 >= curState.gasBuildingCount+1)
-            {
-                buildStarted |= redistributeWorkers(curState, workerTask, buildOrder);
-                if (buildStarted)
-                    buildOrder.pop_front();
+            buildStarted |= redistributeWorkers(curState, workerTask, buildOrder);
+            if (buildStarted){
+                if(buildOrder.front() == curState.mainBuilding){
+                    mainBuildingFinished.push(curState.time+curState.mainBuilding->getBuildTime());
+                    mainBuildingFinished.push(curState.time+curState.mainBuilding->getBuildTime());
+                }
+                if(buildOrder.front() == curState.gasBuilding)
+                    gasWaitTime = -1000;
+
+                buildOrder.pop_front();
             }
 
             // timestep 5
