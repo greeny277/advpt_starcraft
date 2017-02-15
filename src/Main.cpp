@@ -384,17 +384,18 @@ static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, 
         nlohmann::json messages = nlohmann::json::array();
 
         std::queue<int> mainBuildingFinished;
-        mainBuildingFinished.push(0);
-        mainBuildingFinished.push(0);
+        for ( int i = 0; i < 2; ++i ) {
+            mainBuildingFinished.push(0);
+        }
         bool stillBuilding = false;
-        int gasWaitTime = -1000;
+        int gasWaitTime = -1;
         while (curState.time < timeout && (stillBuilding || !buildOrder.empty())) {
             // increment time attribute
             curState.time++;
 
             // figure out if gasbuilding needs a delay
-            if(buildOrder.front() == curState.gasBuilding && gasWaitTime == -1000){
-                gasWaitTime = mainBuildingFinished.back()-curState.gasBuilding->getBuildTime();
+            if(buildOrder.front() == curState.gasBuilding && gasWaitTime == -1){
+                gasWaitTime = std::max(0,mainBuildingFinished.back()-curState.gasBuilding->getBuildTime());
                 mainBuildingFinished.pop();
             }
 
@@ -448,11 +449,12 @@ static std::pair<State, bool> simulate(std::deque<const EntityBP*> &buildOrder, 
             buildStarted |= redistributeWorkers(curState, workerTask, buildOrder);
             if (buildStarted){
                 if(buildOrder.front() == curState.mainBuilding){
-                    mainBuildingFinished.push(curState.time+curState.mainBuilding->getBuildTime());
-                    mainBuildingFinished.push(curState.time+curState.mainBuilding->getBuildTime());
+                    for ( int i = 0; i < 2; ++i ) {
+                        mainBuildingFinished.push(curState.time+curState.mainBuilding->getBuildTime());
+                    }
                 }
                 if(buildOrder.front() == curState.gasBuilding)
-                    gasWaitTime = -1000;
+                    gasWaitTime = -1;
 
                 buildOrder.pop_front();
             }
