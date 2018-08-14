@@ -46,6 +46,15 @@ Zergs, Terran and Protoss have distinct abilities, which are not listed in detai
 Usage
 ---
 
+Building the sources:
+
+```bash
+mkdir src/build
+cd    src/build
+cmake ..
+make
+```
+
 There are different modes that can be simulated
 
 1. Forward simulation:
