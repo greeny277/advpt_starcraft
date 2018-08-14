@@ -34,8 +34,8 @@ necessary to harvest Vespene gas.
 
 The following simple approach is used to simulate resource farming accyrately:
 
-    - Minerals are excavated at an average rate per harvesting worker (∼ 0.7 /s).
-    - Vespene gas is similarly harvested according to average rates (∼ 0.35 /s), but not more than three workers must be assigned to this job simultaneously per tapped geyser. There are only two geysers available per base.
+- Minerals are excavated at an average rate per harvesting worker (∼ 0.7 /s).
+- Vespene gas is similarly harvested according to average rates (∼ 0.35 /s), but not more than three workers must be assigned to this job simultaneously per tapped geyser. There are only two geysers available per base.
 
 
 Races
